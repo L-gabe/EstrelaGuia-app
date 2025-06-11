@@ -77,6 +77,7 @@ function App() {
   const [comandas, setComandas] = useState(() => JSON.parse(localStorage.getItem("comandas")) || {});
   const [dataSelecionada, setDataSelecionada] = useState(() => localStorage.getItem("dataSelecionada") || new Date().toISOString().slice(0, 10));
   const [mesaSelecionada, setMesaSelecionada] = useState(null);
+  const [mostrarFinalizadas, setMostrarFinalizadas] = useState(true); // ADICIONADO: controle para mostrar/ocultar mesas finalizadas
   const printRef = useRef();
 
   // Persistência no localStorage
@@ -107,6 +108,24 @@ function App() {
     if (novoNome && novoNome.trim()) {
       setMesas(prev => prev.map(m => (m.id === id ? { ...m, nome: novoNome.trim() } : m)));
     }
+  };
+
+  // Excluir mesa (remove mesa e comanda relacionada)
+  const excluirMesa = (id) => {  // ADICIONADO
+    if (!window.confirm("Tem certeza que deseja excluir essa mesa? Isso também excluirá a comanda vinculada.")) return;
+
+    setMesas(prev => prev.filter(m => m.id !== id));
+
+    setComandas(prev => {
+      const novasComandasDoDia = { ...prev[dataSelecionada] };
+      delete novasComandasDoDia[id];
+      return {
+        ...prev,
+        [dataSelecionada]: novasComandasDoDia
+      };
+    });
+
+    if (mesaSelecionada === id) setMesaSelecionada(null);
   };
 
   // Adicionar item na comanda
@@ -191,527 +210,248 @@ function App() {
     }));
   };
 
-  // Excluir comanda (remove a chave da comanda para a mesa)
+  // Excluir comanda (remove comanda da data)
   const excluirComanda = (mesaId) => {
     if (!window.confirm("Tem certeza que deseja excluir essa comanda?")) return;
 
-    const novasComandasDoDia = { ...comandasDoDia };
-    delete novasComandasDoDia[mesaId];
-    setComandas(prev => ({
-      ...prev,
-      [dataSelecionada]: novasComandasDoDia
-    }));
+    setComandas(prev => {
+      const novasComandasDoDia = { ...prev[dataSelecionada] };
+      delete novasComandasDoDia[mesaId];
+      return {
+        ...prev,
+        [dataSelecionada]: novasComandasDoDia
+      };
+    });
 
     if (mesaSelecionada === mesaId) setMesaSelecionada(null);
   };
 
-  // Limpar histórico do dia (todas as comandas do dia)
-  const limparHistorico = () => {
-    if (!window.confirm(`Deseja limpar todo o histórico de comandas do dia ${dataSelecionada}?`)) return;
-
-    setComandas(prev => {
-      const novo = { ...prev };
-      delete novo[dataSelecionada];
-      return novo;
-    });
-
-    setMesaSelecionada(null);
+  // Calcular total da comanda
+  const calcularTotal = (mesaId) => {
+    const com = comandasDoDia[mesaId];
+    if (!com || Array.isArray(com)) return 0;
+    return com.itens.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
   };
 
-  // Total geral do dia
-  const totalGeral = Object.values(comandasDoDia).reduce((acc, c) => {
-    if (!c || Array.isArray(c) || !c.itens) return acc;
-    const totalComanda = c.itens.reduce((soma, i) => soma + i.preco * i.quantidade, 0);
-    return acc + totalComanda;
-  }, 0);
+  // Calcular total geral do dia
+  const totalGeral = () => {
+    const coms = comandasDoDia;
+    if (!coms) return 0;
+    return Object.values(coms).reduce((acc, c) => {
+      if (!c || Array.isArray(c)) return acc;
+      return acc + c.itens.reduce((sum, i) => sum + i.preco * i.quantidade, 0);
+    }, 0);
+  };
 
-  // Função para impressão da comanda individual
-  const imprimirComanda = (mesaId) => {
-    const comanda = comandasDoDia[mesaId];
-    if (!comanda || !comanda.itens || comanda.itens.length === 0) {
-      alert("Essa comanda não tem itens para imprimir.");
-      return;
-    }
+  // Imprimir todas as comandas do dia (nova funcionalidade) - ADICIONADO
+  const imprimirTodasComandas = () => {
+    const janela = window.open('', 'Imprimir Comandas');
+    if (!janela) return alert("Não foi possível abrir a janela de impressão.");
 
-    const mesa = mesas.find(m => m.id === mesaId);
-    const janela = window.open("", "PRINT", "width=600,height=600");
-
-    janela.document.write(`<html><head><title>Comanda - ${mesa ? mesa.nome : "Mesa"}</title>`);
-    janela.document.write(`<style>
+    let html = `<html><head><title>Comandas do dia ${dataSelecionada}</title>`;
+    html += `<style>
       body { font-family: Arial, sans-serif; padding: 20px; }
-      h2 { text-align: center; }
-      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-      th, td { border: 1px solid #333; padding: 8px; text-align: left; }
-      th { background-color: #eee; }
-      tfoot td { font-weight: bold; }
-    </style>`);
-    janela.document.write(`</head><body>`);
-    janela.document.write(`<h2>Comanda - ${mesa ? mesa.nome : "Mesa"}</h2>`);
-    janela.document.write(`<p><strong>Status:</strong> ${comanda.status}</p>`);
-    janela.document.write(`<table>
-      <thead>
-        <tr><th>Produto</th><th>Qtd</th><th>Preço Unit.</th><th>Total</th></tr>
-      </thead>
-      <tbody>`);
-    let total = 0;
-    comanda.itens.forEach(i => {
-      const subtotal = i.preco * i.quantidade;
-      total += subtotal;
-      janela.document.write(`<tr>
-        <td>${i.nome}</td>
-        <td>${i.quantidade}</td>
-        <td>R$ ${i.preco.toFixed(2)}</td>
-        <td>R$ ${subtotal.toFixed(2)}</td>
-      </tr>`);
-    });
-    janela.document.write(`</tbody><tfoot><tr><td colspan="3">Total</td><td>R$ ${total.toFixed(2)}</td></tr></tfoot></table>`);
-    janela.document.write(`<p>Data: ${dataSelecionada}</p>`);
-    janela.document.write(`</body></html>`);
+      h2 { border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+      table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+      th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    </style></head><body>`;
+    html += `<h1>Comandas do dia ${dataSelecionada}</h1>`;
 
+    Object.entries(comandasDoDia).forEach(([mesaId, comanda]) => {
+      if (!comanda || Array.isArray(comanda) || comanda.itens.length === 0) return;
+
+      html += `<h2>Mesa: ${mesas.find(m => m.id === mesaId)?.nome || mesaId} - Status: ${comanda.status}</h2>`;
+      html += `<table><thead><tr><th>Item</th><th>Qtd</th><th>Preço</th><th>Total</th></tr></thead><tbody>`;
+
+      comanda.itens.forEach(i => {
+        html += `<tr>
+          <td>${i.nome}</td>
+          <td>${i.quantidade}</td>
+          <td>R$ ${i.preco.toFixed(2)}</td>
+          <td>R$ ${(i.preco * i.quantidade).toFixed(2)}</td>
+        </tr>`;
+      });
+
+      const total = comanda.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0);
+      html += `<tr><td colspan="3"><b>Total</b></td><td><b>R$ ${total.toFixed(2)}</b></td></tr>`;
+      html += `</tbody></table>`;
+    });
+
+    html += `</body></html>`;
+    janela.document.write(html);
     janela.document.close();
     janela.focus();
     janela.print();
     janela.close();
   };
 
-  // Renderiza itens da comanda para a mesa selecionada
-  const renderItensComanda = () => {
-    if (!mesaSelecionada) return <p>Selecione uma mesa para ver a comanda.</p>;
-
-    const com = comandasDoDia[mesaSelecionada];
-    if (!com || !com.itens || com.itens.length === 0) {
-      return <p>Comanda vazia.</p>;
-    }
-
-    return (
-      <table className="comanda-itens-table">
-        <thead>
-          <tr>
-            <th>Produto</th>
-            <th>Qtd</th>
-            <th>Preço Unit.</th>
-            <th>Subtotal</th>
-            <th>Remover</th>
-          </tr>
-        </thead>
-        <tbody>
-          {com.itens.map((item) => (
-            <tr key={item.nome}>
-              <td>{item.nome}</td>
-              <td>{item.quantidade}</td>
-              <td>R$ {item.preco.toFixed(2)}</td>
-              <td>R$ {(item.preco * item.quantidade).toFixed(2)}</td>
-              <td>
-                <button className="btn-small btn-danger" onClick={() => removerItem(mesaSelecionada, item.nome)}>X</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-        <tfoot>
-          <tr>
-            <td colSpan={3}><b>Total:</b></td>
-            <td colSpan={2}>
-              R$ {com.itens.reduce((sum, i) => sum + i.preco * i.quantidade, 0).toFixed(2)}
-            </td>
-          </tr>
-        </tfoot>
-      </table>
-    );
-  };
-
-  // Renderiza as comandas agrupadas por status
-  const renderComandasAgrupadas = () => {
-    const abertas = [];
-    const finalizadas = [];
-
-    mesas.forEach(mesa => {
-      const c = comandasDoDia[mesa.id];
-      if (c && !Array.isArray(c) && c.itens && c.itens.length > 0) {
-        if (c.status === "Aberta") abertas.push({ mesa, comanda: c });
-        else finalizadas.push({ mesa, comanda: c });
-      }
+  // Filtrar mesas para exibir de acordo com a opção de mostrar/ocultar finalizadas
+  const mesasFiltradas = mostrarFinalizadas
+    ? mesas
+    : mesas.filter(mesa => {
+      const com = comandasDoDia[mesa.id];
+      return !com || com.status !== "Finalizada";
     });
 
-    const renderGrupo = (grupo, titulo) => (
-      <section className="grupo-comandas">
-        <h3>{titulo} ({grupo.length})</h3>
-        {grupo.length === 0 && <p>Nenhuma comanda {titulo.toLowerCase()}.</p>}
-        {grupo.map(({ mesa, comanda }) => (
-          <div
-            key={mesa.id}
-            className={`comanda-resumo ${mesaSelecionada === mesa.id ? "selecionada" : ""}`}
-            onClick={() => setMesaSelecionada(mesa.id)}
-          >
-            <div>
-              <strong>{mesa.nome}</strong> - <em>{comanda.status}</em>
-            </div>
-            <div>
-              Itens: {comanda.itens.reduce((acc, i) => acc + i.quantidade, 0)} | Total: R$ {comanda.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0).toFixed(2)}
-            </div>
-            <div className="botoes-comanda-resumo">
-              <button className="btn-small btn-warning" onClick={e => { e.stopPropagation(); toggleStatus(mesa.id); }}>
-                {comanda.status === "Aberta" ? "Finalizar" : "Reabrir"}
-              </button>
-              <button className="btn-small btn-danger" onClick={e => { e.stopPropagation(); excluirComanda(mesa.id); }}>
-                Excluir
-              </button>
-              <button className="btn-small btn-info" onClick={e => { e.stopPropagation(); imprimirComanda(mesa.id); }}>
-                Imprimir
-              </button>
-            </div>
-          </div>
-        ))}
-      </section>
-    );
-
-    return (
-      <>
-        {renderGrupo(abertas, "Comandas Abertas")}
-        {renderGrupo(finalizadas, "Comandas Finalizadas")}
-      </>
-    );
-  };
-
   return (
-    <div className="app-container">
-      <header>
-        <h1>Sistema de Comandas - Restaurante</h1>
-        <div className="data-selecao">
-          <label>Data: </label>
+    <div style={{ padding: 20, fontFamily: "Arial, sans-serif" }}>
+      <h1>Controle de Comandas do Restaurante</h1>
+
+      <div style={{ marginBottom: 20 }}>
+        <label>
+          Data:{" "}
           <input
             type="date"
             value={dataSelecionada}
-            onChange={e => {
-              setDataSelecionada(e.target.value);
-              setMesaSelecionada(null);
-            }}
-            max={new Date().toISOString().slice(0, 10)}
+            onChange={e => setDataSelecionada(e.target.value)}
           />
-          <button className="btn-danger" onClick={limparHistorico}>Limpar Histórico do Dia</button>
-        </div>
-      </header>
+        </label>
 
-      <main>
-        <aside className="mesas-lista">
-          <div className="header-mesas">
-            <h2>Mesas</h2>
-            <button className="btn" onClick={adicionarMesa}>+ Mesa</button>
-          </div>
-          {mesas.length === 0 && <p>Nenhuma mesa cadastrada.</p>}
-          <ul>
-            {mesas.map((mesa) => (
-              <li
-                key={mesa.id}
-                className={mesaSelecionada === mesa.id ? "selecionada" : ""}
-                onClick={() => setMesaSelecionada(mesa.id)}
-              >
-                <span>{mesa.nome}</span>
-                <button className="btn-small btn-warning" onClick={e => { e.stopPropagation(); editarNomeMesa(mesa.id); }}>Editar</button>
-              </li>
-            ))}
+        <button onClick={adicionarMesa} style={{ marginLeft: 10 }}>
+          + Adicionar Mesa
+        </button>
+
+        <button onClick={imprimirTodasComandas} style={{ marginLeft: 10 }}>
+          Imprimir Todas as Comandas do Dia
+        </button>
+
+        <label style={{ marginLeft: 20 }}>
+          <input
+            type="checkbox"
+            checked={mostrarFinalizadas}
+            onChange={() => setMostrarFinalizadas(!mostrarFinalizadas)}
+          />{" "}
+          Mostrar Mesas Finalizadas
+        </label>
+      </div>
+
+      <div style={{ display: "flex", gap: 20 }}>
+        <div style={{ flex: 1, border: "1px solid #ccc", padding: 10 }}>
+          <h2>Mesas</h2>
+          {mesasFiltradas.length === 0 && <p>Nenhuma mesa para exibir.</p>}
+          <ul style={{ listStyle: "none", padding: 0 }}>
+            {mesasFiltradas.map(mesa => {
+              const comanda = comandasDoDia[mesa.id];
+              return (
+                <li
+                  key={mesa.id}
+                  style={{
+                    marginBottom: 5,
+                    cursor: "pointer",
+                    padding: 5,
+                    backgroundColor:
+                      mesaSelecionada === mesa.id ? "#d0f0d0" : "#f0f0f0",
+                    borderRadius: 4,
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                  onClick={() => setMesaSelecionada(mesa.id)}
+                  title={comanda ? `Status: ${comanda.status}` : "Sem comanda"}
+                >
+                  <span>
+                    {mesa.nome}{" "}
+                    {comanda && (
+                      <strong>
+                        (R$ {calcularTotal(mesa.id).toFixed(2)} - {comanda.status})
+                      </strong>
+                    )}
+                  </span>
+                  <span>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        editarNomeMesa(mesa.id);
+                      }}
+                      style={{ marginRight: 5 }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={e => {
+                        e.stopPropagation();
+                        excluirMesa(mesa.id);
+                      }}
+                      title="Excluir mesa"
+                      style={{ color: "red" }}
+                    >
+                      🗑️
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
-        </aside>
+        </div>
 
-        <section className="comandas-container">
-          {renderComandasAgrupadas()}
-        </section>
-
-        <section className="detalhes-comanda">
-          <h2>Comanda Detalhes</h2>
-          {renderItensComanda()}
-
-          {mesaSelecionada && (
-            <div className="acoes-comanda">
-              <button className="btn" onClick={() => toggleStatus(mesaSelecionada)}>
-                {comandasDoDia[mesaSelecionada]?.status === "Finalizada" ? "Reabrir Comanda" : "Finalizar Comanda"}
+        <div style={{ flex: 2, border: "1px solid #ccc", padding: 10 }}>
+          <h2>Comanda da Mesa {mesaSelecionada ? mesas.find(m => m.id === mesaSelecionada)?.nome : ""}</h2>
+          {mesaSelecionada && comandasDoDia[mesaSelecionada] ? (
+            <>
+              <button onClick={() => toggleStatus(mesaSelecionada)}>
+                {comandasDoDia[mesaSelecionada].status === "Aberta"
+                  ? "Finalizar Comanda"
+                  : "Reabrir Comanda"}
               </button>
-              <button className="btn btn-danger" onClick={() => limparComanda(mesaSelecionada)}>Limpar Itens</button>
-              <button className="btn btn-info" onClick={() => imprimirComanda(mesaSelecionada)}>Imprimir Comanda</button>
-            </div>
-          )}
-        </section>
+              <button onClick={() => limparComanda(mesaSelecionada)} style={{ marginLeft: 5 }}>
+                Limpar Comanda
+              </button>
+              <button onClick={() => excluirComanda(mesaSelecionada)} style={{ marginLeft: 5, color: "red" }}>
+                Excluir Comanda
+              </button>
 
-        <section className="cardapio">
+              <ul style={{ listStyle: "none", padding: 0, marginTop: 10 }}>
+                {comandasDoDia[mesaSelecionada].itens.map(item => (
+                  <li key={item.nome} style={{ marginBottom: 5, display: "flex", justifyContent: "space-between" }}>
+                    <span>
+                      {item.nome} - {item.quantidade} x R$ {item.preco.toFixed(2)} = R$ {(item.quantidade * item.preco).toFixed(2)}
+                    </span>
+                    <button onClick={() => removerItem(mesaSelecionada, item.nome)} style={{ color: "red" }}>
+                      ❌
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <h3>Total: R$ {calcularTotal(mesaSelecionada).toFixed(2)}</h3>
+            </>
+          ) : (
+            <p>Selecione uma mesa para ver a comanda.</p>
+          )}
+        </div>
+
+        <div style={{ flex: 3, border: "1px solid #ccc", padding: 10 }}>
           <h2>Cardápio</h2>
           {categoriasOrdenadas.map(categoria => (
-            <div key={categoria} className="categoria-cardapio">
+            <div key={categoria}>
               <h3>{categoria}</h3>
-              <div className="itens-categoria">
-                {produtosPorCategoria[categoria].map(item => (
-                  <button
-                    key={item.nome}
-                    className="btn-item"
-                    onClick={() => adicionarItem(item)}
-                    title={`R$ ${item.preco.toFixed(2)}`}
-                  >
-                    {item.nome} <br /> <small>R$ {item.preco.toFixed(2)}</small>
-                  </button>
+              <ul style={{ listStyle: "none", padding: 0, display: "flex", flexWrap: "wrap", gap: 10 }}>
+                {produtosPorCategoria[categoria].map(produto => (
+                  <li key={produto.nome}>
+                    <button
+                      onClick={() => adicionarItem(produto)}
+                      style={{
+                        padding: "5px 10px",
+                        cursor: "pointer",
+                        borderRadius: 4,
+                        border: "1px solid #888",
+                        backgroundColor: "#fff",
+                      }}
+                      title={`R$ ${produto.preco.toFixed(2)}`}
+                    >
+                      {produto.nome}
+                    </button>
+                  </li>
                 ))}
-              </div>
+              </ul>
             </div>
           ))}
-        </section>
-      </main>
+        </div>
+      </div>
 
-      <footer>
-        <h3>Total Geral do Dia: R$ {totalGeral.toFixed(2)}</h3>
-      </footer>
-
-      <style>{`
-        * {
-          box-sizing: border-box;
-        }
-        body {
-          margin: 0;
-          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-          background: #f5f7fa;
-          color: #333;
-        }
-        .app-container {
-          max-width: 1200px;
-          margin: 0 auto;
-          padding: 10px 15px;
-          display: flex;
-          flex-direction: column;
-          min-height: 100vh;
-        }
-        header {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          margin-bottom: 15px;
-        }
-        header h1 {
-          margin: 0;
-          font-weight: 700;
-          color: #2c3e50;
-        }
-        .data-selecao {
-          margin-top: 10px;
-          display: flex;
-          gap: 10px;
-          align-items: center;
-          flex-wrap: wrap;
-        }
-        main {
-          display: flex;
-          flex: 1;
-          gap: 15px;
-        }
-        aside.mesas-lista {
-          width: 150px;
-          background: white;
-          padding: 10px;
-          border-radius: 6px;
-          box-shadow: 0 0 10px #ddd;
-          display: flex;
-          flex-direction: column;
-          max-height: 70vh;
-          overflow-y: auto;
-        }
-        .header-mesas {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 10px;
-        }
-        ul {
-          list-style: none;
-          padding: 0;
-          margin: 0;
-        }
-        li {
-          padding: 6px 8px;
-          margin-bottom: 5px;
-          border-radius: 4px;
-          cursor: pointer;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: #ecf0f1;
-          font-weight: 600;
-          color: #34495e;
-          user-select: none;
-          transition: background-color 0.2s;
-        }
-        li:hover {
-          background: #bdc3c7;
-        }
-        li.selecionada {
-          background: #3498db;
-          color: white;
-          font-weight: 700;
-        }
-        .btn-small {
-          font-size: 12px;
-          padding: 2px 6px;
-          border-radius: 4px;
-          border: none;
-          cursor: pointer;
-          user-select: none;
-        }
-        .btn-small.btn-warning {
-          background: #f39c12;
-          color: white;
-          margin-left: 6px;
-        }
-        .btn-small.btn-danger {
-          background: #e74c3c;
-          color: white;
-          margin-left: 6px;
-        }
-        .btn-small.btn-info {
-          background: #2980b9;
-          color: white;
-          margin-left: 6px;
-        }
-        .btn {
-          cursor: pointer;
-          border: none;
-          background-color: #3498db;
-          color: white;
-          padding: 8px 12px;
-          border-radius: 5px;
-          font-weight: 700;
-          transition: background-color 0.2s;
-          user-select: none;
-        }
-        .btn:hover {
-          background-color: #2980b9;
-        }
-        .btn-danger {
-          background-color: #e74c3c;
-        }
-        .btn-danger:hover {
-          background-color: #c0392b;
-        }
-        .btn-info {
-          background-color: #2980b9;
-        }
-        .btn-info:hover {
-          background-color: #1c5980;
-        }
-        main section {
-          background: white;
-          border-radius: 6px;
-          box-shadow: 0 0 10px #ddd;
-          padding: 10px;
-          overflow-y: auto;
-          max-height: 70vh;
-        }
-        .comandas-container {
-          flex: 1;
-          max-width: 320px;
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-        }
-        .comanda-resumo {
-          border: 1px solid #ccc;
-          padding: 10px;
-          border-radius: 5px;
-          cursor: pointer;
-          background: #fafafa;
-          transition: background-color 0.3s;
-          user-select: none;
-        }
-        .comanda-resumo:hover {
-          background: #e1e8f0;
-        }
-        .comanda-resumo.selecionada {
-          background: #3498db;
-          color: white;
-          font-weight: 700;
-        }
-        .botoes-comanda-resumo {
-          margin-top: 8px;
-          display: flex;
-          gap: 5px;
-        }
-        .detalhes-comanda {
-          width: 400px;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
-        .acoes-comanda {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        .comanda-itens-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-        .comanda-itens-table th,
-        .comanda-itens-table td {
-          border: 1px solid #ccc;
-          padding: 6px 8px;
-          text-align: left;
-        }
-        .comanda-itens-table tfoot td {
-          font-weight: 700;
-        }
-        .cardapio {
-          flex: 1;
-          max-width: 450px;
-          overflow-y: auto;
-        }
-        .categoria-cardapio {
-          margin-bottom: 15px;
-        }
-        .categoria-cardapio h3 {
-          margin-bottom: 8px;
-          border-bottom: 2px solid #3498db;
-          padding-bottom: 2px;
-          color: #2980b9;
-        }
-        .itens-categoria {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 8px;
-        }
-        .btn-item {
-          flex: 1 1 120px;
-          background: #3498db;
-          color: white;
-          border: none;
-          border-radius: 6px;
-          padding: 10px 8px;
-          cursor: pointer;
-          font-weight: 600;
-          transition: background-color 0.2s;
-          white-space: normal;
-          user-select: none;
-          text-align: center;
-          line-height: 1.2;
-        }
-        .btn-item:hover {
-          background: #2980b9;
-        }
-        footer {
-          margin-top: 15px;
-          text-align: center;
-          font-size: 1.2em;
-          font-weight: 700;
-          color: #2c3e50;
-        }
-
-        /* Responsividade básica */
-        @media (max-width: 1100px) {
-          main {
-            flex-direction: column;
-          }
-          aside.mesas-lista,
-          .comandas-container,
-          .detalhes-comanda,
-          .cardapio {
-            max-width: 100%;
-            width: 100%;
-            max-height: none;
-          }
-        }
-      `}</style>
+      <div style={{ marginTop: 20 }}>
+        <h2>Total Geral do Dia: R$ {totalGeral().toFixed(2)}</h2>
+      </div>
     </div>
   );
 }
