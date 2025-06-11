@@ -122,12 +122,10 @@ function App() {
       ? { ...com }
       : { status: "Aberta", itens: [] };
 
-    // Evita erro se comanda.itens for undefined
     if (!Array.isArray(comanda.itens)) {
       comanda.itens = [];
     }
 
-    // Atualiza ou adiciona o item
     const idx = comanda.itens.findIndex(i => i.nome === item.nome);
     if (idx >= 0) {
       comanda.itens[idx].quantidade += 1;
@@ -194,108 +192,120 @@ function App() {
     }));
   };
 
-  // Excluir comanda
+  // Excluir comanda (remove a chave da comanda para a mesa)
   const excluirComanda = (mesaId) => {
-    if (!window.confirm("Deseja realmente excluir esta comanda?")) return;
+    if (!window.confirm("Tem certeza que deseja excluir essa comanda?")) return;
 
     const novasComandasDoDia = { ...comandasDoDia };
     delete novasComandasDoDia[mesaId];
-
     setComandas(prev => ({
       ...prev,
-      [dataSelecionada]: novasComandasDoDia,
+      [dataSelecionada]: novasComandasDoDia
     }));
 
     if (mesaSelecionada === mesaId) setMesaSelecionada(null);
   };
 
-  // Limpar histórico do dia
+  // Limpar histórico do dia (todas as comandas do dia)
   const limparHistorico = () => {
-    if (!window.confirm("Deseja limpar todas as comandas do dia?")) return;
-
-    setComandas(prev => ({
-      ...prev,
-      [dataSelecionada]: {},
-    }));
-
+    if (!window.confirm(`Deseja limpar todo o histórico do dia ${dataSelecionada}?`)) return;
+    const novasComandas = { ...comandas };
+    delete novasComandas[dataSelecionada];
+    setComandas(novasComandas);
     setMesaSelecionada(null);
   };
 
-  // Total da comanda
-  const totalComanda = (mesaId) => {
-    const com = comandasDoDia[mesaId];
-    if (!com || Array.isArray(com)) return 0;
-
-    return com.itens.reduce((acc, item) => acc + item.preco * item.quantidade, 0);
+  // Total de vendas geral do dia
+  const totalVendasDoDia = () => {
+    const dia = comandasDoDia;
+    if (!dia) return 0;
+    let total = 0;
+    for (const mesaId in dia) {
+      const com = dia[mesaId];
+      if (!com || Array.isArray(com)) continue;
+      if (com.status === "Finalizada") {
+        total += com.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0);
+      }
+    }
+    return total.toFixed(2);
   };
 
-  // Total geral do dia
-  const totalGeral = () => {
-    if (!comandasDoDia) return 0;
-
-    return Object.values(comandasDoDia).reduce((acc, com) => {
-      if (!com || Array.isArray(com) || !com.itens) return acc;
-      return acc + com.itens.reduce((a, i) => a + i.preco * i.quantidade, 0);
-    }, 0);
-  };
-
-  // Impressão - só imprime a div ref
-  const imprimir = () => {
+  // Impressão das comandas do dia
+  const imprimirTodasComandas = () => {
     if (!printRef.current) return;
+
     const conteudo = printRef.current.innerHTML;
-    const win = window.open("", "PRINT", "width=600,height=600");
-    win.document.write(`<html><head><title>Comandas</title></head><body>${conteudo}</body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-    win.close();
+    const janela = window.open("", "_blank");
+    janela.document.write(`
+      <html>
+        <head><title>Imprimir Comandas</title></head>
+        <body>${conteudo}</body>
+      </html>
+    `);
+    janela.document.close();
+    janela.focus();
+    janela.print();
+    janela.close();
   };
+
+  // Selecionar data
+  const alterarData = (evt) => {
+    setDataSelecionada(evt.target.value);
+    setMesaSelecionada(null);
+  };
+
+  // Mesas que tem comanda
+  const mesasComComanda = Object.keys(comandasDoDia);
+
+  // Separar comandas abertas e finalizadas
+  const comandasAbertas = mesasComComanda.filter(id => comandasDoDia[id]?.status === "Aberta");
+  const comandasFinalizadas = mesasComComanda.filter(id => comandasDoDia[id]?.status === "Finalizada");
 
   return (
-    <div style={{ maxWidth: 1200, margin: "auto", padding: 20, fontFamily: "Arial, sans-serif" }}>
-      <h1>Controle de Comandas do Restaurante</h1>
+    <div style={{ fontFamily: "Arial, sans-serif", maxWidth: 1200, margin: "auto", padding: 20 }}>
+      <h1>Controle de Vendas e Comandas - Restaurante</h1>
 
-      <div style={{ marginBottom: 20 }}>
+      <section style={{ marginBottom: 20 }}>
         <label>
-          Data:
-          <input
-            type="date"
-            value={dataSelecionada}
-            onChange={e => setDataSelecionada(e.target.value)}
-            style={{ marginLeft: 10 }}
-          />
+          Data:{" "}
+          <input type="date" value={dataSelecionada} onChange={alterarData} />
         </label>
-        <button onClick={limparHistorico} style={{ marginLeft: 20, backgroundColor: "red", color: "white", border: "none", padding: "5px 10px", cursor: "pointer" }}>
+
+        <button style={{ marginLeft: 10 }} onClick={adicionarMesa}>Adicionar Mesa</button>
+        <button style={{ marginLeft: 10, backgroundColor: "#ff4d4d", color: "white" }} onClick={limparHistorico}>
           Limpar Histórico do Dia
         </button>
-      </div>
+      </section>
 
-      <div style={{ display: "flex", gap: 20, marginBottom: 20, flexWrap: "wrap" }}>
-        <div>
+      <section style={{ display: "flex", gap: 20 }}>
+        {/* Listagem de mesas */}
+        <div style={{ flex: "1 1 200px" }}>
           <h2>Mesas</h2>
-          <button onClick={adicionarMesa} style={{ marginBottom: 10 }}>Adicionar Mesa</button>
           {mesas.length === 0 && <p>Nenhuma mesa cadastrada.</p>}
           <ul style={{ listStyle: "none", paddingLeft: 0 }}>
             {mesas.map(mesa => (
-              <li key={mesa.id} style={{ marginBottom: 6, cursor: "pointer" }}>
+              <li
+                key={mesa.id}
+                style={{
+                  marginBottom: 6,
+                  cursor: "pointer",
+                  backgroundColor: mesaSelecionada === mesa.id ? "#def" : "#eee",
+                  padding: "6px 10px",
+                  borderRadius: 4,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+                onClick={() => setMesaSelecionada(mesa.id)}
+              >
+                <span>{mesa.nome}</span>
                 <button
-                  onClick={() => setMesaSelecionada(mesa.id)}
-                  style={{
-                    padding: "5px 10px",
-                    backgroundColor: mesaSelecionada === mesa.id ? "#007bff" : "#eee",
-                    color: mesaSelecionada === mesa.id ? "white" : "black",
-                    border: "1px solid #ccc",
-                    borderRadius: 4,
-                    cursor: "pointer",
-                    marginRight: 5,
+                  style={{ marginLeft: 10 }}
+                  onClick={e => {
+                    e.stopPropagation();
+                    editarNomeMesa(mesa.id);
                   }}
-                >
-                  {mesa.nome}
-                </button>
-                <button
-                  onClick={() => editarNomeMesa(mesa.id)}
-                  title="Editar nome"
-                  style={{ cursor: "pointer" }}
+                  title="Editar nome da mesa"
                 >
                   ✏️
                 </button>
@@ -304,24 +314,26 @@ function App() {
           </ul>
         </div>
 
-        <div style={{ flex: 1, minWidth: 300 }}>
-          <h2>Cardápio</h2>
+        {/* Cardápio */}
+        <div style={{ flex: 2 }}>
+          <h2>Cardápio (clique para adicionar)</h2>
           {categoriasOrdenadas.map(categoria => (
-            <div key={categoria} style={{ marginBottom: 10 }}>
+            <div key={categoria} style={{ marginBottom: 12 }}>
               <h3>{categoria}</h3>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                 {produtosPorCategoria[categoria].map(produto => (
                   <button
                     key={produto.nome}
                     onClick={() => adicionarItem(produto)}
+                    disabled={!mesaSelecionada}
                     style={{
                       padding: "6px 10px",
                       borderRadius: 4,
                       border: "1px solid #ccc",
-                      cursor: "pointer",
-                      backgroundColor: "#f0f0f0",
+                      cursor: mesaSelecionada ? "pointer" : "not-allowed",
+                      backgroundColor: mesaSelecionada ? "#fff" : "#f9f9f9",
                     }}
-                    title={`Adicionar ${produto.nome} - R$ ${produto.preco.toFixed(2)}`}
+                    title={mesaSelecionada ? "" : "Selecione uma mesa para adicionar itens"}
                   >
                     {produto.nome} - R$ {produto.preco.toFixed(2)}
                   </button>
@@ -331,125 +343,178 @@ function App() {
           ))}
         </div>
 
-        <div style={{ flex: 1, minWidth: 300 }}>
-          <h2>Comanda da Mesa {mesaSelecionada ? (mesas.find(m => m.id === mesaSelecionada)?.nome || "") : "(Nenhuma selecionada)"}</h2>
-          {!mesaSelecionada && <p>Selecione uma mesa para ver ou editar a comanda.</p>}
-
+        {/* Comanda da mesa selecionada */}
+        <div style={{ flex: "1 1 350px", border: "1px solid #ddd", padding: 10, borderRadius: 6 }}>
+          <h2>Comanda</h2>
+          {!mesaSelecionada && <p>Selecione uma mesa para ver a comanda.</p>}
           {mesaSelecionada && (
             <>
-              {comandasDoDia[mesaSelecionada] && comandasDoDia[mesaSelecionada].itens.length > 0 ? (
-                <>
-                  <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-                    {comandasDoDia[mesaSelecionada].itens.map(item => (
-                      <li
-                        key={item.nome}
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: 4,
-                          borderBottom: "1px solid #ccc",
-                          paddingBottom: 4,
-                        }}
-                      >
-                        <span>{item.nome} x {item.quantidade}</span>
-                        <span>R$ {(item.preco * item.quantidade).toFixed(2)}</span>
-                        <button
-                          onClick={() => removerItem(mesaSelecionada, item.nome)}
-                          style={{
-                            marginLeft: 10,
-                            backgroundColor: "red",
-                            color: "white",
-                            border: "none",
-                            cursor: "pointer",
-                            borderRadius: 3,
-                            padding: "2px 6px",
-                          }}
-                          title="Remover item"
-                        >
-                          ✖
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                  <p>
-                    <strong>Total: R$ {totalComanda(mesaSelecionada).toFixed(2)}</strong>
-                  </p>
-                  <p>Status: <strong>{comandasDoDia[mesaSelecionada].status}</strong></p>
-                  <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                    <button onClick={() => toggleStatus(mesaSelecionada)}>
-                      {comandasDoDia[mesaSelecionada].status === "Aberta" ? "Finalizar" : "Reabrir"}
-                    </button>
-                    <button onClick={() => limparComanda(mesaSelecionada)}>Limpar Itens</button>
-                    <button onClick={() => excluirComanda(mesaSelecionada)} style={{ backgroundColor: "red", color: "white" }}>
-                      Excluir Comanda
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <p>Esta comanda está vazia.</p>
+              <h3>Mesa: {mesas.find(m => m.id === mesaSelecionada)?.nome || "Desconhecida"}</h3>
+              {(!comandasDoDia[mesaSelecionada] || comandasDoDia[mesaSelecionada].itens.length === 0) && (
+                <p>Comanda vazia.</p>
               )}
+              {comandasDoDia[mesaSelecionada]?.itens && comandasDoDia[mesaSelecionada].itens.length > 0 && (
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      <th style={{ borderBottom: "1px solid #ddd", paddingBottom: 4, textAlign: "left" }}>Item</th>
+                      <th style={{ borderBottom: "1px solid #ddd", paddingBottom: 4, textAlign: "right" }}>Qtd</th>
+                      <th style={{ borderBottom: "1px solid #ddd", paddingBottom: 4, textAlign: "right" }}>Preço</th>
+                      <th style={{ borderBottom: "1px solid #ddd", paddingBottom: 4, textAlign: "right" }}>Total</th>
+                      <th style={{ borderBottom: "1px solid #ddd", paddingBottom: 4, textAlign: "center" }}>Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {comandasDoDia[mesaSelecionada].itens.map(item => (
+                      <tr key={item.nome}>
+                        <td>{item.nome}</td>
+                        <td style={{ textAlign: "right" }}>{item.quantidade}</td>
+                        <td style={{ textAlign: "right" }}>R$ {item.preco.toFixed(2)}</td>
+                        <td style={{ textAlign: "right" }}>R$ {(item.preco * item.quantidade).toFixed(2)}</td>
+                        <td style={{ textAlign: "center" }}>
+                          <button onClick={() => removerItem(mesaSelecionada, item.nome)} title="Remover item">
+                            ❌
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                      <td colSpan={3} style={{ fontWeight: "bold", textAlign: "right" }}>Total:</td>
+                      <td style={{ fontWeight: "bold", textAlign: "right" }}>
+                        R$ {comandasDoDia[mesaSelecionada].itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0).toFixed(2)}
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              )}
+
+              <div style={{ marginTop: 10 }}>
+                <button onClick={() => toggleStatus(mesaSelecionada)}>
+                  {comandasDoDia[mesaSelecionada]?.status === "Finalizada" ? "Reabrir" : "Finalizar"}
+                </button>
+                <button onClick={() => limparComanda(mesaSelecionada)} style={{ marginLeft: 6 }}>
+                  Limpar
+                </button>
+                <button onClick={() => excluirComanda(mesaSelecionada)} style={{ marginLeft: 6, color: "red" }}>
+                  Excluir Comanda
+                </button>
+              </div>
             </>
           )}
         </div>
-      </div>
+      </section>
 
-      <hr />
+      {/* Listagem geral das comandas do dia */}
+      <section style={{ marginTop: 30 }}>
+        <h2>Comandas do Dia ({dataSelecionada})</h2>
 
-      <div style={{ marginTop: 20 }}>
         <label>
-          Mostrar comandas finalizadas:
           <input
             type="checkbox"
             checked={mostrarFinalizadas}
             onChange={e => setMostrarFinalizadas(e.target.checked)}
-            style={{ marginLeft: 10 }}
-          />
+          />{" "}
+          Mostrar comandas finalizadas
         </label>
-      </div>
 
-      <div ref={printRef} style={{ marginTop: 20 }}>
-        <h2>Comandas do Dia ({dataSelecionada})</h2>
-        {Object.keys(comandasDoDia).length === 0 && <p>Nenhuma comanda registrada neste dia.</p>}
-        {Object.entries(comandasDoDia).map(([mesaId, comanda]) => {
-          if (!comanda || !comanda.itens || !Array.isArray(comanda.itens)) return null;
-          if (!mostrarFinalizadas && comanda.status === "Finalizada") return null;
+        <div
+          ref={printRef}
+          style={{
+            marginTop: 10,
+            display: "flex",
+            gap: 20,
+            flexWrap: "wrap",
+            maxHeight: 400,
+            overflowY: "auto",
+            border: "1px solid #ccc",
+            padding: 10,
+            borderRadius: 6,
+          }}
+        >
+          {/* Comandas abertas */}
+          {comandasAbertas.length === 0 && <p>Não há comandas abertas.</p>}
+          {comandasAbertas.map(mesaId => {
+            const mesa = mesas.find(m => m.id === mesaId);
+            const comanda = comandasDoDia[mesaId];
+            if (!mesa || !comanda) return null;
+            return (
+              <div
+                key={mesaId}
+                style={{
+                  flex: "1 1 300px",
+                  border: "2px solid #28a745",
+                  borderRadius: 6,
+                  padding: 8,
+                  backgroundColor: "#e6ffe6",
+                }}
+              >
+                <h3>{mesa.nome} (Aberta)</h3>
+                <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+                  {comanda.itens.map(item => (
+                    <li key={item.nome}>
+                      {item.nome} x {item.quantidade} = R$ {(item.preco * item.quantidade).toFixed(2)}
+                    </li>
+                  ))}
+                </ul>
+                <p style={{ fontWeight: "bold" }}>
+                  Total: R$ {comanda.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0).toFixed(2)}
+                </p>
+              </div>
+            );
+          })}
 
-          const nomeMesa = mesas.find(m => m.id === mesaId)?.nome || mesaId;
+          {/* Comandas finalizadas */}
+          {mostrarFinalizadas && (
+            <>
+              {comandasFinalizadas.length === 0 && <p>Não há comandas finalizadas.</p>}
+              {comandasFinalizadas.map(mesaId => {
+                const mesa = mesas.find(m => m.id === mesaId);
+                const comanda = comandasDoDia[mesaId];
+                if (!mesa || !comanda) return null;
+                return (
+                  <div
+                    key={mesaId}
+                    style={{
+                      flex: "1 1 300px",
+                      border: "2px solid #999",
+                      borderRadius: 6,
+                      padding: 8,
+                      backgroundColor: "#f0f0f0",
+                      opacity: 0.7,
+                    }}
+                  >
+                    <h3>{mesa.nome} (Finalizada)</h3>
+                    <ul style={{ listStyle: "none", paddingLeft: 0 }}>
+                      {comanda.itens.map(item => (
+                        <li key={item.nome}>
+                          {item.nome} x {item.quantidade} = R$ {(item.preco * item.quantidade).toFixed(2)}
+                        </li>
+                      ))}
+                    </ul>
+                    <p style={{ fontWeight: "bold" }}>
+                      Total: R$ {comanda.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0).toFixed(2)}
+                    </p>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </div>
 
-          return (
-            <div
-              key={mesaId}
-              style={{
-                border: "1px solid #ccc",
-                marginBottom: 12,
-                padding: 10,
-                borderRadius: 6,
-                backgroundColor: comanda.status === "Finalizada" ? "#d3ffd3" : "#fff",
-              }}
-            >
-              <h3>
-                Mesa: {nomeMesa} - Status: <strong>{comanda.status}</strong>
-              </h3>
-              <ul style={{ listStyle: "none", paddingLeft: 0 }}>
-                {comanda.itens.map(item => (
-                  <li key={item.nome}>
-                    {item.nome} x {item.quantidade} = R$ {(item.preco * item.quantidade).toFixed(2)}
-                  </li>
-                ))}
-              </ul>
-              <p><strong>Total: R$ {totalComanda(mesaId).toFixed(2)}</strong></p>
-            </div>
-          );
-        })}
-      </div>
+        <div style={{ marginTop: 10, fontWeight: "bold", fontSize: 18 }}>
+          Total Geral das Comandas Finalizadas: R$ {totalVendasDoDia()}
+        </div>
 
-      <div style={{ marginTop: 20 }}>
-        <h2>Total Geral do Dia: R$ {totalGeral().toFixed(2)}</h2>
-        <button onClick={imprimir} style={{ padding: "8px 15px", cursor: "pointer" }}>
-          Imprimir Comandas Visíveis
+        <button
+          onClick={imprimirTodasComandas}
+          style={{ marginTop: 10, padding: "8px 16px", cursor: "pointer" }}
+        >
+          Imprimir Todas as Comandas do Dia
         </button>
-      </div>
+      </section>
     </div>
   );
 }
