@@ -72,6 +72,223 @@ const categoriasOrdenadas = [
   "Picolé",
 ];
 
+const styles = {
+  container: {
+    padding: 20,
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    backgroundColor: "#f9f9f9",
+    minHeight: "100vh",
+    color: "#333",
+  },
+  header: {
+    marginBottom: 20,
+    fontWeight: "700",
+    fontSize: 28,
+    color: "#2c3e50",
+  },
+  topControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 20,
+    flexWrap: "wrap",
+  },
+  inputDate: {
+    padding: "6px 10px",
+    fontSize: 16,
+    borderRadius: 4,
+    border: "1px solid #ccc",
+  },
+  buttonPrimary: {
+    padding: "8px 15px",
+    borderRadius: 5,
+    border: "none",
+    cursor: "pointer",
+    backgroundColor: "#3498db",
+    color: "#fff",
+    fontWeight: "600",
+    transition: "background-color 0.3s",
+  },
+  buttonPrimaryHover: {
+    backgroundColor: "#2980b9",
+  },
+  buttonDanger: {
+    padding: "8px 15px",
+    borderRadius: 5,
+    border: "none",
+    cursor: "pointer",
+    backgroundColor: "#e74c3c",
+    color: "#fff",
+    fontWeight: "600",
+  },
+  layoutMain: {
+    display: "flex",
+    gap: 20,
+    flexWrap: "wrap",
+  },
+  sidebar: {
+    flex: "1 1 220px",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    boxShadow: "0 0 8px rgb(0 0 0 / 0.1)",
+    padding: 15,
+    maxHeight: "70vh",
+    overflowY: "auto",
+  },
+  sidebarTitle: {
+    fontSize: 18,
+    marginBottom: 12,
+    fontWeight: "700",
+    borderBottom: "1px solid #ddd",
+    paddingBottom: 8,
+  },
+  mesaButton: {
+    display: "block",
+    width: "100%",
+    textAlign: "left",
+    padding: "8px 12px",
+    marginBottom: 6,
+    borderRadius: 5,
+    border: "1px solid #3498db",
+    backgroundColor: "#ecf6fd",
+    color: "#3498db",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background-color 0.2s",
+  },
+  mesaButtonSelected: {
+    backgroundColor: "#3498db",
+    color: "#fff",
+  },
+  mesasFinalizadasTitle: {
+    fontSize: 16,
+    marginTop: 15,
+    cursor: "pointer",
+    color: "#7f8c8d",
+    userSelect: "none",
+  },
+  contentArea: {
+    flex: "3 1 600px",
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    boxShadow: "0 0 12px rgb(0 0 0 / 0.1)",
+    padding: 20,
+    maxHeight: "70vh",
+    overflowY: "auto",
+    display: "flex",
+    flexDirection: "column",
+  },
+  comandaHeader: {
+    marginBottom: 15,
+    fontWeight: "700",
+    fontSize: 22,
+    color: "#2c3e50",
+  },
+  itensContainer: {
+    flexGrow: 1,
+    marginBottom: 15,
+    overflowY: "auto",
+  },
+  itemRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px 10px",
+    borderBottom: "1px solid #eee",
+    fontSize: 16,
+  },
+  btnRemoveItem: {
+    backgroundColor: "#e74c3c",
+    border: "none",
+    color: "#fff",
+    borderRadius: 5,
+    cursor: "pointer",
+    padding: "4px 8px",
+    fontWeight: "600",
+  },
+  actionsRow: {
+    display: "flex",
+    gap: 12,
+    marginBottom: 15,
+  },
+  btnAction: {
+    flexGrow: 1,
+    padding: "10px",
+    borderRadius: 6,
+    border: "none",
+    cursor: "pointer",
+    fontWeight: "700",
+    fontSize: 15,
+    transition: "background-color 0.3s",
+  },
+  btnStatusAberta: {
+    backgroundColor: "#27ae60",
+    color: "#fff",
+  },
+  btnStatusFinalizada: {
+    backgroundColor: "#95a5a6",
+    color: "#fff",
+  },
+  btnLimpar: {
+    backgroundColor: "#f39c12",
+    color: "#fff",
+  },
+  btnExcluir: {
+    backgroundColor: "#e74c3c",
+    color: "#fff",
+  },
+  btnImprimir: {
+    backgroundColor: "#2980b9",
+    color: "#fff",
+  },
+  categoriasContainer: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))",
+    gap: 12,
+    maxHeight: "350px",
+    overflowY: "auto",
+  },
+  categoriaBox: {
+    backgroundColor: "#fafafa",
+    borderRadius: 6,
+    padding: 10,
+    boxShadow: "inset 0 0 5px rgb(0 0 0 / 0.05)",
+  },
+  categoriaTitle: {
+    marginBottom: 8,
+    fontWeight: "700",
+    fontSize: 16,
+    borderBottom: "1px solid #ddd",
+    paddingBottom: 4,
+    color: "#34495e",
+  },
+  produtoBtn: {
+    display: "block",
+    width: "100%",
+    padding: "8px 5px",
+    marginBottom: 6,
+    borderRadius: 5,
+    border: "1px solid #2980b9",
+    backgroundColor: "#3498db",
+    color: "#fff",
+    fontWeight: "600",
+    fontSize: 14,
+    cursor: "pointer",
+    transition: "background-color 0.25s",
+    textAlign: "center",
+  },
+  produtoBtnHover: {
+    backgroundColor: "#1c5980",
+  },
+  footer: {
+    marginTop: 20,
+    fontWeight: "700",
+    fontSize: 18,
+    textAlign: "right",
+    color: "#2c3e50",
+  },
+};
+
 function App() {
   const [mesas, setMesas] = useState(() => JSON.parse(localStorage.getItem("mesas")) || []);
   const [comandas, setComandas] = useState(() => JSON.parse(localStorage.getItem("comandas")) || {});
@@ -222,94 +439,5 @@ function App() {
       <div>
         <h3>Comanda Mesa: ${nomeMesa}</h3>
         <ul>
-          ${comanda.itens.map(i => `<li>${i.nome} x${i.quantidade} = R$${(i.preco * i.quantidade).toFixed(2)}</li>`).join('')}
-        </ul>
-        <p><strong>Total: R$${comanda.itens.reduce((a, i) => a + i.preco * i.quantidade, 0).toFixed(2)}</strong></p>
-      </div>
-    `;
-    const janela = window.open('', '', 'width=400,height=600');
-    janela.document.write(`<html><head><title>Imprimir</title></head><body>${content}</body></html>`);
-    janela.document.close();
-    janela.print();
-  };
+          ${comanda.itens.map(i => `<li>${i.nome} x${i.quantidade} = R$${(i.preco * i.quantidade).to
 
-  return (
-    <div style={{ padding: 20 }}>
-      <h1>Controle de Comandas</h1>
-      <div>
-        <label>Data:</label>
-        <input type="date" value={dataSelecionada} onChange={(e) => setDataSelecionada(e.target.value)} />
-        <button onClick={adicionarMesa}>+ Mesa</button>
-        <button onClick={imprimirTodasComandas}>🖨️ Imprimir Todas</button>
-        <button onClick={limparTudo} style={{ background: "#e74c3c", color: "#fff", marginLeft: 5 }}>Limpar Tudo</button>
-      </div>
-
-      <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
-        <div style={{ flex: 1 }}>
-          <h3>Mesas Abertas</h3>
-          <ul>
-            {mesasAbertas.map(mesa => (
-              <li key={mesa.id}>
-                <button onClick={() => setMesaSelecionada(mesa.id)}>{mesa.nome}</button>
-              </li>
-            ))}
-          </ul>
-
-          <h3 style={{ cursor: "pointer" }} onClick={() => setMostrarFinalizadas(!mostrarFinalizadas)}>
-            Mesas Finalizadas {mostrarFinalizadas ? "▲" : "▼"}
-          </h3>
-          {mostrarFinalizadas && (
-            <ul>
-              {mesasFinalizadas.map(mesa => (
-                <li key={mesa.id}>
-                  <button onClick={() => setMesaSelecionada(mesa.id)}>{mesa.nome}</button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div style={{ flex: 3 }}>
-          {mesaSelecionada && (
-            <div>
-              <h2>Comanda da Mesa: {mesas.find(m => m.id === mesaSelecionada)?.nome}</h2>
-              <div>
-                {(comandasDoDia[mesaSelecionada]?.itens || []).map(item => (
-                  <div key={item.nome}>
-                    {item.nome} x{item.quantidade} = R$ {(item.preco * item.quantidade).toFixed(2)}
-                    <button onClick={() => removerItem(mesaSelecionada, item.nome)}>Remover</button>
-                  </div>
-                ))}
-              </div>
-              <div>
-                <button onClick={() => toggleStatus(mesaSelecionada)}>Alterar Status</button>
-                <button onClick={() => limparComanda(mesaSelecionada)}>Limpar</button>
-                <button onClick={() => excluirComanda(mesaSelecionada)}>Excluir</button>
-                <button onClick={() => imprimirMesa(mesaSelecionada)}>Imprimir</button>
-              </div>
-            </div>
-          )}
-
-          <div>
-            {categoriasOrdenadas.map(c => (
-              <div key={c}>
-                <h3>{c}</h3>
-                {produtosPorCategoria[c].map(p => (
-                  <button key={p.nome} onClick={() => adicionarItem(p)}>
-                    {p.nome} - R$ {p.preco}
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <footer style={{ marginTop: 20, fontWeight: "bold" }}>
-        Total Geral do Dia: R$ {totalGeral.toFixed(2)}
-      </footer>
-    </div>
-  );
-}
-
-export default App;
