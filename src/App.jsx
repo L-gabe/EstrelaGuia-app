@@ -1,1156 +1,903 @@
 import React, { useState, useEffect, useRef } from "react";
 
 const produtosPorCategoria = {
-  Refeição: [
+  "Refeição": [
     { nome: "Camaroada P", preco: 80 },
     { nome: "Camaroada G", preco: 140 },
     { nome: "Camarão ao Alho P", preco: 50 },
     { nome: "Camarão ao Alho G", preco: 100 },
   ],
   Bebidas: [
+    { nome: "Cerveja Lata", preco: 8 },
     { nome: "Refrigerante Lata", preco: 6 },
-    { nome: "Cerveja Long Neck", preco: 8 },
-    { nome: "Suco Natural", preco: 7 },
+    { nome: "Água Mineral", preco: 5 },
   ],
   Sobremesas: [
-    { nome: "Pudim", preco: 10 },
-    { nome: "Sorvete", preco: 12 },
+    { nome: "Pudim", preco: 12 },
+    { nome: "Sorvete", preco: 10 },
   ],
 };
 
-const STATUS = {
-  ABERTA: "Aberta",
-  FINALIZADA: "Finalizada",
-};
-
-export default function App() {
-  // Estado das mesas (array de objetos com id, nome, comandas)
+function App() {
   const [mesas, setMesas] = useState(() => {
-    const saved = localStorage.getItem("mesas");
-    return saved ? JSON.parse(saved) : [];
+    const salvas = localStorage.getItem("mesasComandas");
+    return salvas ? JSON.parse(salvas) : [];
   });
-
-  // Estado do nome da nova mesa para adicionar
+  const [mesaSelecionadaId, setMesaSelecionadaId] = useState(null);
   const [novaMesaNome, setNovaMesaNome] = useState("");
-
-  // Estado do filtro de visualização: "todas", "abertas", "finalizadas"
-  const [filtroStatus, setFiltroStatus] = useState("todas");
-
-  // Estado para editar o nome da mesa
   const [editandoMesaId, setEditandoMesaId] = useState(null);
-  const [nomeEditado, setNomeEditado] = useState("");
+  const [mesaNomeEditando, setMesaNomeEditando] = useState("");
+  const printRef = useRef();
 
-  // Guardar referência para impressão
-  const imprimirRef = useRef();
-
-  // Salvar mesas no localStorage sempre que mudar
+  // Salvar mesas no localStorage
   useEffect(() => {
-    localStorage.setItem("mesas", JSON.stringify(mesas));
+    localStorage.setItem("mesasComandas", JSON.stringify(mesas));
   }, [mesas]);
 
-  // Função para adicionar mesa
-  function adicionarMesa() {
+  // Adicionar nova mesa
+  const adicionarMesa = () => {
     if (!novaMesaNome.trim()) return;
     const novaMesa = {
       id: Date.now(),
       nome: novaMesaNome.trim(),
       comandas: [],
     };
-    setMesas((antigo) => [...antigo, novaMesa]);
+    setMesas((prev) => [...prev, novaMesa]);
     setNovaMesaNome("");
-  }
+  };
 
-  // Função para editar nome da mesa
-  function iniciarEdicaoMesa(id, nomeAtual) {
-    setEditandoMesaId(id);
-    setNomeEditado(nomeAtual);
-  }
+  // Selecionar mesa para editar comandas
+  const selecionarMesa = (id) => {
+    setMesaSelecionadaId(id);
+  };
 
-  function salvarNomeMesa(id) {
-    if (!nomeEditado.trim()) return;
-    setMesas((antigo) =>
-      antigo.map((mesa) =>
-        mesa.id === id ? { ...mesa, nome: nomeEditado.trim() } : mesa
-      )
-    );
-    setEditandoMesaId(null);
-    setNomeEditado("");
-  }
-
-  // Função para remover mesa
-  function removerMesa(id) {
-    if (
-      window.confirm(
-        "Tem certeza que deseja remover esta mesa e todas as suas comandas?"
-      )
-    ) {
-      setMesas((antigo) => antigo.filter((mesa) => mesa.id !== id));
-    }
-  }
-
-  // Adicionar comanda a uma mesa
-  function adicionarComanda(mesaId) {
-    const novaComanda = {
-      id: Date.now(),
-      itens: [],
-      status: STATUS.ABERTA,
-      dataCriacao: new Date().toISOString(),
-    };
-    setMesas((antigo) =>
-      antigo.map((mesa) =>
-        mesa.id === mesaId
-          ? { ...mesa, comandas: [...mesa.comandas, novaComanda] }
-          : mesa
-      )
-    );
-  }
-
-  // Adicionar item a comanda
-  function adicionarItem(mesaId, comandaId, item) {
-    setMesas((antigo) =>
-      antigo.map((mesa) => {
-        if (mesa.id !== mesaId) return mesa;
-        return {
-          ...mesa,
-          comandas: mesa.comandas.map((comanda) => {
-            if (comanda.id !== comandaId) return comanda;
-
-            // Verificar se item já existe na comanda para incrementar quantidade
-            const itemExistenteIndex = comanda.itens.findIndex(
-              (i) => i.nome === item.nome
-            );
-
-            let novosItens;
-            if (itemExistenteIndex >= 0) {
-              novosItens = [...comanda.itens];
-              novosItens[itemExistenteIndex].quantidade += 1;
-            } else {
-              novosItens = [...comanda.itens, { ...item, quantidade: 1 }];
-            }
-
-            return {
-              ...comanda,
-              itens: novosItens,
-            };
-          }),
-        };
+  // Adicionar item à comanda da mesa selecionada
+  const adicionarItem = (produto) => {
+    if (!mesaSelecionadaId) return;
+    setMesas((prev) =>
+      prev.map((mesa) => {
+        if (mesa.id !== mesaSelecionadaId) return mesa;
+        let comandas = mesa.comandas;
+        let comandaAberta = comandas.find((c) => c.status === "Aberta");
+        if (!comandaAberta) {
+          comandaAberta = {
+            id: Date.now(),
+            itens: [],
+            status: "Aberta",
+            data: new Date().toISOString(),
+          };
+          comandas = [...comandas, comandaAberta];
+        }
+        const itensAtualizados = [...comandaAberta.itens];
+        const idx = itensAtualizados.findIndex((i) => i.nome === produto.nome);
+        if (idx >= 0) {
+          itensAtualizados[idx].quantidade += 1;
+        } else {
+          itensAtualizados.push({ ...produto, quantidade: 1 });
+        }
+        comandas = comandas.map((c) =>
+          c.id === comandaAberta.id ? { ...c, itens: itensAtualizados } : c
+        );
+        return { ...mesa, comandas };
       })
     );
-  }
+  };
+
+  // Alterar quantidade de item na comanda
+  const alterarQuantidade = (mesaId, comandaId, itemNome, delta) => {
+    setMesas((prev) =>
+      prev.map((mesa) => {
+        if (mesa.id !== mesaId) return mesa;
+        const comandas = mesa.comandas.map((comanda) => {
+          if (comanda.id !== comandaId) return comanda;
+          let itens = comanda.itens
+            .map((item) =>
+              item.nome === itemNome
+                ? { ...item, quantidade: Math.max(1, item.quantidade + delta) }
+                : item
+            )
+            .filter((item) => item.quantidade > 0);
+          return { ...comanda, itens };
+        });
+        return { ...mesa, comandas };
+      })
+    );
+  };
 
   // Remover item da comanda
-  function removerItem(mesaId, comandaId, nomeItem) {
-    setMesas((antigo) =>
-      antigo.map((mesa) => {
+  const removerItem = (mesaId, comandaId, itemNome) => {
+    setMesas((prev) =>
+      prev.map((mesa) => {
         if (mesa.id !== mesaId) return mesa;
-        return {
-          ...mesa,
-          comandas: mesa.comandas.map((comanda) => {
-            if (comanda.id !== comandaId) return comanda;
-
-            const novosItens = comanda.itens
-              .map((item) => {
-                if (item.nome === nomeItem) {
-                  if (item.quantidade > 1) {
-                    return { ...item, quantidade: item.quantidade - 1 };
-                  } else {
-                    return null; // remover item
-                  }
-                }
-                return item;
-              })
-              .filter(Boolean);
-
-            return {
-              ...comanda,
-              itens: novosItens,
-            };
-          }),
-        };
+        const comandas = mesa.comandas.map((comanda) => {
+          if (comanda.id !== comandaId) return comanda;
+          const itens = comanda.itens.filter((i) => i.nome !== itemNome);
+          return { ...comanda, itens };
+        });
+        return { ...mesa, comandas };
       })
     );
-  }
+  };
 
   // Finalizar comanda
-  function finalizarComanda(mesaId, comandaId) {
-    setMesas((antigo) =>
-      antigo.map((mesa) => {
+  const finalizarComanda = (mesaId, comandaId) => {
+    setMesas((prev) =>
+      prev.map((mesa) => {
         if (mesa.id !== mesaId) return mesa;
-        return {
-          ...mesa,
-          comandas: mesa.comandas.map((comanda) =>
-            comanda.id === comandaId
-              ? { ...comanda, status: STATUS.FINALIZADA }
-              : comanda
-          ),
-        };
+        const comandas = mesa.comandas.map((comanda) =>
+          comanda.id === comandaId ? { ...comanda, status: "Finalizada" } : comanda
+        );
+        return { ...mesa, comandas };
       })
     );
-  }
-
-  // Limpar comanda (remover todos itens)
-  function limparComanda(mesaId, comandaId) {
-    if (!window.confirm("Deseja realmente limpar todos os itens dessa comanda?"))
-      return;
-    setMesas((antigo) =>
-      antigo.map((mesa) => {
-        if (mesa.id !== mesaId) return mesa;
-        return {
-          ...mesa,
-          comandas: mesa.comandas.map((comanda) =>
-            comanda.id === comandaId ? { ...comanda, itens: [] } : comanda
-          ),
-        };
-      })
-    );
-  }
+  };
 
   // Excluir comanda
-  function excluirComanda(mesaId, comandaId) {
-    if (!window.confirm("Deseja realmente excluir esta comanda?")) return;
-    setMesas((antigo) =>
-      antigo.map((mesa) => {
+  const excluirComanda = (mesaId, comandaId) => {
+    setMesas((prev) =>
+      prev.map((mesa) => {
         if (mesa.id !== mesaId) return mesa;
-        return {
-          ...mesa,
-          comandas: mesa.comandas.filter((comanda) => comanda.id !== comandaId),
-        };
+        const comandas = mesa.comandas.filter((c) => c.id !== comandaId);
+        return { ...mesa, comandas };
       })
     );
-  }
+  };
 
-  // Limpar histórico de todas comandas
-  function limparTodasComandas() {
-    if (
-      !window.confirm(
-        "Tem certeza que deseja excluir todas as comandas de todas as mesas?"
-      )
-    )
-      return;
-    setMesas((antigo) =>
-      antigo.map((mesa) => ({
+  // Editar nome da mesa
+  const iniciarEdicaoMesa = (mesa) => {
+    setEditandoMesaId(mesa.id);
+    setMesaNomeEditando(mesa.nome);
+  };
+  const salvarNomeMesa = (mesaId) => {
+    if (!mesaNomeEditando.trim()) return;
+    setMesas((prev) =>
+      prev.map((m) => (m.id === mesaId ? { ...m, nome: mesaNomeEditando.trim() } : m))
+    );
+    setEditandoMesaId(null);
+    setMesaNomeEditando("");
+  };
+
+  // Limpar todas as comandas finalizadas do dia
+  const limparComandasFinalizadas = () => {
+    setMesas((prev) =>
+      prev.map((mesa) => ({
         ...mesa,
-        comandas: [],
+        comandas: mesa.comandas.filter((c) => c.status !== "Finalizada"),
       }))
     );
-  }
+  };
 
-  // Calcular total de uma comanda
-  function calcularTotalComanda(comanda) {
-    return comanda.itens.reduce(
-      (acc, item) => acc + item.preco * item.quantidade,
+  // Imprimir comanda
+  const imprimirComanda = (mesaNome, comanda) => {
+    const janela = window.open("", "PRINT", "width=400,height=600");
+    if (!janela) return;
+    const itensHtml = comanda.itens
+      .map(
+        (item) =>
+          `<tr>
+            <td>${item.nome}</td>
+            <td style="text-align:center;">${item.quantidade}</td>
+            <td style="text-align:right;">R$ ${item.preco.toFixed(2)}</td>
+            <td style="text-align:right;">R$ ${(item.preco * item.quantidade).toFixed(2)}</td>
+          </tr>`
+      )
+      .join("");
+    const total = comanda.itens.reduce(
+      (acc, i) => acc + i.preco * i.quantidade,
       0
     );
-  }
-
-  // Calcular total geral (todas as comandas finalizadas)
-  function calcularTotalGeral() {
-    let total = 0;
-    mesas.forEach((mesa) => {
-      mesa.comandas.forEach((comanda) => {
-        if (comanda.status === STATUS.FINALIZADA) {
-          total += calcularTotalComanda(comanda);
-        }
-      });
-    });
-    return total;
-  }
-
-  // Impressão individual da comanda (formata para impressão térmica)
-  function imprimirComanda(mesa, comanda) {
-    const janela = window.open("", "_blank");
-    if (!janela) {
-      alert("Bloqueador de pop-up ativado! Permita para imprimir.");
-      return;
-    }
     janela.document.write(`
       <html>
         <head>
-          <title>Comanda - ${mesa.nome}</title>
+          <title>Comanda - ${mesaNome}</title>
           <style>
-            body {
-              font-family: monospace;
-              font-size: 12px;
-              width: 280px;
-              margin: 0;
-              padding: 10px;
-            }
-            h2, h3 {
-              text-align: center;
-              margin: 0 0 10px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            td {
-              padding: 2px 0;
-            }
-            .quantidade {
-              width: 20px;
-              text-align: center;
-            }
-            .preco {
-              width: 60px;
-              text-align: right;
-            }
-            .total {
-              font-weight: bold;
-              text-align: right;
-              border-top: 1px solid #000;
-              padding-top: 5px;
-              margin-top: 5px;
-            }
+            body { font-family: monospace; font-size: 12px; padding: 10px; }
+            h1 { text-align: center; font-weight: bold; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border-bottom: 1px solid #000; padding: 4px; }
+            th { text-align: left; }
+            tfoot td { font-weight: bold; }
           </style>
         </head>
         <body>
-          <h2>Mesa: ${mesa.nome}</h2>
-          <h3>Comanda ID: ${comanda.id}</h3>
+          <h1>Comanda - ${mesaNome}</h1>
+          <p>Data: ${new Date(comanda.data).toLocaleString()}</p>
           <table>
-            ${comanda.itens
-              .map(
-                (item) => `
+            <thead>
               <tr>
-                <td>${item.nome}</td>
-                <td class="quantidade">${item.quantidade}</td>
-                <td class="preco">R$ ${(
-                  item.preco * item.quantidade
-                ).toFixed(2)}</td>
+                <th>Item</th><th>Qtd</th><th>Preço</th><th>Total</th>
               </tr>
-            `
-              )
-              .join("")}
+            </thead>
+            <tbody>
+              ${itensHtml}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="text-align:right;">Total:</td>
+                <td style="text-align:right;">R$ ${total.toFixed(2)}</td>
+              </tr>
+            </tfoot>
           </table>
-          <div class="total">
-            Total: R$ ${calcularTotalComanda(comanda).toFixed(2)}
-          </div>
-          <div style="margin-top:20px; text-align:center;">
-            <small>Obrigado pela preferência!</small>
-          </div>
-          <script>
-            window.onload = function() {
-              window.print();
-              window.onafterprint = function() { window.close(); }
-            }
-          </script>
         </body>
       </html>
     `);
     janela.document.close();
-  }
+    janela.focus();
+    janela.print();
+    janela.close();
+  };
 
-  // Impressão geral das comandas finalizadas do dia
-  function imprimirComandasDoDia() {
-    const comandasFinalizadas = [];
+  // Imprimir todas comandas finalizadas do dia
+  const imprimirTodasFinalizadas = () => {
+    const todas = [];
     mesas.forEach((mesa) => {
-      mesa.comandas.forEach((comanda) => {
-        if (comanda.status === STATUS.FINALIZADA) {
-          comandasFinalizadas.push({ mesa, comanda });
-        }
-      });
+      mesa.comandas
+        .filter((c) => c.status === "Finalizada")
+        .forEach((comanda) => todas.push({ mesaNome: mesa.nome, comanda }));
     });
-
-    if (comandasFinalizadas.length === 0) {
+    if (todas.length === 0) {
       alert("Não há comandas finalizadas para imprimir.");
       return;
     }
 
-    const janela = window.open("", "_blank");
-    if (!janela) {
-      alert("Bloqueador de pop-up ativado! Permita para imprimir.");
-      return;
-    }
-
-    let html = `
+    const janela = window.open("", "PRINT", "width=400,height=600");
+    if (!janela) return;
+    let htmlBody = "";
+    todas.forEach(({ mesaNome, comanda }, idx) => {
+      const itensHtml = comanda.itens
+        .map(
+          (item) =>
+            `<tr>
+              <td>${item.nome}</td>
+              <td style="text-align:center;">${item.quantidade}</td>
+              <td style="text-align:right;">R$ ${item.preco.toFixed(2)}</td>
+              <td style="text-align:right;">R$ ${(item.preco * item.quantidade).toFixed(2)}</td>
+            </tr>`
+        )
+        .join("");
+      const total = comanda.itens.reduce(
+        (acc, i) => acc + i.preco * i.quantidade,
+        0
+      );
+      htmlBody += `
+        <div style="page-break-after: always; margin-bottom: 20px;">
+          <h1 style="text-align:center;">Comanda - ${mesaNome}</h1>
+          <p>Data: ${new Date(comanda.data).toLocaleString()}</p>
+          <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="border-bottom:1px solid #000; text-align:left;">Item</th>
+                <th style="border-bottom:1px solid #000; text-align:center;">Qtd</th>
+                <th style="border-bottom:1px solid #000; text-align:right;">Preço</th>
+                <th style="border-bottom:1px solid #000; text-align:right;">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itensHtml}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colspan="3" style="text-align:right; font-weight:bold;">Total:</td>
+                <td style="text-align:right; font-weight:bold;">R$ ${total.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      `;
+    });
+    janela.document.write(`
       <html>
         <head>
-          <title>Comandas do Dia</title>
+          <title>Comandas Finalizadas</title>
           <style>
-            body {
-              font-family: monospace;
-              font-size: 12px;
-              width: 280px;
-              margin: 0 auto;
-              padding: 10px;
-            }
-            h2 {
-              text-align: center;
-              margin-bottom: 10px;
-            }
-            .comanda {
-              margin-bottom: 20px;
-              border-bottom: 1px dashed #000;
-              padding-bottom: 10px;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            td {
-              padding: 2px 0;
-            }
-            .quantidade {
-              width: 20px;
-              text-align: center;
-            }
-            .preco {
-              width: 60px;
-              text-align: right;
-            }
-            .total {
-              font-weight: bold;
-              text-align: right;
-              border-top: 1px solid #000;
-              padding-top: 5px;
-              margin-top: 5px;
+            body { font-family: monospace; font-size: 12px; padding: 10px; }
+            h1 { font-weight: bold; margin-bottom: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+            th, td { border-bottom: 1px solid #000; padding: 4px; }
+            th { text-align: left; }
+            tfoot td { font-weight: bold; }
+            @media print {
+              div { page-break-after: always; }
             }
           </style>
         </head>
         <body>
-          <h2>Comandas Finalizadas do Dia</h2>
-    `;
-
-    comandasFinalizadas.forEach(({ mesa, comanda }) => {
-      html += `
-        <div class="comanda">
-          <div><strong>Mesa:</strong> ${mesa.nome}</div>
-          <div><strong>Comanda ID:</strong> ${comanda.id}</div>
-          <table>
-            ${comanda.itens
-              .map(
-                (item) => `
-              <tr>
-                <td>${item.nome}</td>
-                <td class="quantidade">${item.quantidade}</td>
-                <td class="preco">R$ ${(item.preco * item.quantidade).toFixed(
-                  2
-                )}</td>
-              </tr>
-            `
-              )
-              .join("")}
-          </table>
-          <div class="total">
-            Total: R$ ${calcularTotalComanda(comanda).toFixed(2)}
-          </div>
-        </div>
-      `;
-    });
-
-    html += `
-        <div style="text-align:right; font-weight:bold; margin-top: 15px;">
-          Total Geral: R$ ${calcularTotalGeral().toFixed(2)}
-        </div>
-        <script>
-          window.onload = function() {
-            window.print();
-            window.onafterprint = function() { window.close(); }
-          }
-        </script>
-      </body>
-    </html>
-    `;
-
-    janela.document.write(html);
+          ${htmlBody}
+        </body>
+      </html>
+    `);
     janela.document.close();
-  }
+    janela.focus();
+    janela.print();
+    janela.close();
+  };
 
-  // Filtrar comandas por status
-  function filtrarComandas(comandas) {
-    if (filtroStatus === "abertas") {
-      return comandas.filter((c) => c.status === STATUS.ABERTA);
-    }
-    if (filtroStatus === "finalizadas") {
-      return comandas.filter((c) => c.status === STATUS.FINALIZADA);
-    }
-    return comandas;
-  }
+  // Calcular total geral do dia (somente comandas finalizadas)
+  const totalGeral = mesas.reduce((acc, mesa) => {
+    const totalMesa = mesa.comandas
+      .filter((c) => c.status === "Finalizada")
+      .reduce((accC, c) => {
+        return accC + c.itens.reduce((accI, i) => accI + i.preco * i.quantidade, 0);
+      }, 0);
+    return acc + totalMesa;
+  }, 0);
 
-  // JSX Render
   return (
     <>
       <style>{`
         * {
           box-sizing: border-box;
         }
-        body {
+        body, html, #root {
+          height: 100%;
           margin: 0;
-          background: #f7f9fc;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-            Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+          font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+          background: #f5f7fa;
           color: #333;
         }
-        h1 {
-          margin: 0;
-          padding: 1rem;
-          text-align: center;
-          background: #007bff;
+        header {
+          background: #2f86eb;
           color: white;
+          padding: 1rem 1.5rem;
+          font-size: 1.5rem;
           font-weight: 700;
-          font-size: 1.8rem;
+          text-align: center;
           user-select: none;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         }
-        .container {
-          max-width: 1200px;
-          margin: 1rem auto 3rem;
-          padding: 0 1rem;
+        main {
+          display: flex;
+          flex-wrap: wrap;
+          padding: 1rem;
+          gap: 1rem;
+          justify-content: center;
+        }
+        section {
+          background: white;
+          border-radius: 8px;
+          box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+          padding: 1rem;
+          max-width: 380px;
+          flex: 1 1 380px;
+          display: flex;
+          flex-direction: column;
+          height: fit-content;
+        }
+        h2 {
+          margin-top: 0;
+          font-weight: 600;
+          color: #2f86eb;
+          margin-bottom: 1rem;
+          border-bottom: 2px solid #2f86eb;
+          padding-bottom: 0.3rem;
         }
         .nova-mesa {
           display: flex;
-          justify-content: center;
-          margin-bottom: 1rem;
           gap: 0.5rem;
-          flex-wrap: wrap;
+          margin-bottom: 1rem;
         }
-        .nova-mesa input {
-          padding: 0.5rem 1rem;
+        input[type="text"] {
+          flex: 1;
+          padding: 0.5rem;
+          border: 1px solid #ccc;
+          border-radius: 6px;
           font-size: 1rem;
-          border: 2px solid #007bff;
-          border-radius: 4px;
-          flex: 1 1 300px;
-          max-width: 400px;
           transition: border-color 0.3s;
         }
-        .nova-mesa input:focus {
+        input[type="text"]:focus {
           outline: none;
-          border-color: #0056b3;
+          border-color: #2f86eb;
+          box-shadow: 0 0 5px rgba(47,134,235,0.5);
         }
-        .nova-mesa button {
-          background: #007bff;
-          border: none;
+        button {
+          background: #2f86eb;
           color: white;
-          font-weight: 600;
+          border: none;
+          border-radius: 6px;
+          padding: 0.5rem 1rem;
           font-size: 1rem;
-          padding: 0.5rem 1.5rem;
-          border-radius: 4px;
           cursor: pointer;
           transition: background-color 0.3s;
-          white-space: nowrap;
-        }
-        .nova-mesa button:hover {
-          background: #0056b3;
-        }
-
-        .filtro-status {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 1.5rem;
-          gap: 1rem;
-          flex-wrap: wrap;
-        }
-        .filtro-status button {
-          background: none;
-          border: 2px solid #007bff;
-          color: #007bff;
-          padding: 0.3rem 0.8rem;
-          border-radius: 20px;
-          cursor: pointer;
-          font-weight: 600;
-          transition: all 0.3s;
-          min-width: 100px;
           user-select: none;
         }
-        .filtro-status button.active,
-        .filtro-status button:hover {
-          background: #007bff;
-          color: white;
-          border-color: #0056b3;
+        button:hover:not(:disabled) {
+          background: #1c5dc9;
         }
-
-        .mesas-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit,minmax(320px,1fr));
-          gap: 1.2rem;
+        button:disabled {
+          background: #999;
+          cursor: not-allowed;
         }
-
-        .mesa-card {
-          background: white;
-          border-radius: 12px;
-          box-shadow: 0 3px 8px rgb(0 0 0 / 0.1);
-          display: flex;
-          flex-direction: column;
-          padding: 1rem;
-          max-height: 100%;
+        ul.mesas-lista {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+          max-height: 400px;
+          overflow-y: auto;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          background: #fafafa;
         }
-        .mesa-header {
+        ul.mesas-lista li {
+          padding: 0.6rem 0.8rem;
+          border-bottom: 1px solid #eee;
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 0.6rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
         }
-        .mesa-nome {
+        ul.mesas-lista li:last-child {
+          border-bottom: none;
+        }
+        ul.mesas-lista li:hover {
+          background: #e6f0ff;
+        }
+        ul.mesas-lista li.selecionada {
+          background: #cde1ff;
           font-weight: 700;
-          font-size: 1.25rem;
-          user-select: none;
-          flex-grow: 1;
+          color: #1c5dc9;
         }
-        .mesa-nome input {
-          font-size: 1.1rem;
-          padding: 0.25rem 0.5rem;
-          border: 1.5px solid #007bff;
-          border-radius: 6px;
-          width: 100%;
-          max-width: 200px;
+        ul.mesas-lista li .acoes {
+          display: flex;
+          gap: 0.5rem;
         }
-        .mesa-acoes button {
-          background: none;
-          border: none;
-          cursor: pointer;
-          color: #007bff;
-          margin-left: 0.4rem;
-          font-size: 1.2rem;
-          padding: 0.2rem 0.4rem;
-          transition: color 0.2s;
-          user-select: none;
-        }
-        .mesa-acoes button:hover {
-          color: #0056b3;
-        }
-
-        .btn-acao {
-          background: #007bff;
-          color: white;
-          border: none;
-          padding: 0.3rem 0.8rem;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 600;
+        ul.mesas-lista li button {
+          background: transparent;
+          color: #2f86eb;
+          padding: 0.2rem 0.5rem;
           font-size: 0.9rem;
-          user-select: none;
-          transition: background-color 0.3s;
+          border-radius: 4px;
         }
-        .btn-acao:hover {
-          background: #0056b3;
-        }
-        .btn-acao:disabled {
-          background: #b0c4de;
-          cursor: not-allowed;
+        ul.mesas-lista li button:hover {
+          background: #1c5dc9;
+          color: white;
         }
 
-        .comanda-lista {
-          flex-grow: 1;
-          overflow-y: auto;
-          max-height: 350px;
-          padding-right: 4px;
+        .card-comanda {
+          background: #fefefe;
+          border: 1px solid #ddd;
+          border-radius: 6px;
+          margin-bottom: 1rem;
+          padding: 0.8rem 1rem;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          display: flex;
+          flex-direction: column;
         }
-        .comanda-card {
-          background: #f4f8ff;
-          border-radius: 8px;
-          margin-bottom: 10px;
-          padding: 0.6rem 1rem;
-          box-shadow: inset 0 0 5px rgb(0 123 255 / 0.1);
-          user-select: none;
-        }
-        .comanda-cabecalho {
+        .comanda-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 0.5rem;
           font-weight: 600;
-          font-size: 0.95rem;
-          color: #0056b3;
+          color: #2f86eb;
+          font-size: 1.1rem;
         }
-        .itens-lista {
-          margin: 0;
-          padding: 0;
-          list-style: none;
-          max-height: 150px;
+        .comanda-itens {
+          border-top: 1px solid #ddd;
+          padding-top: 0.5rem;
+          max-height: 180px;
           overflow-y: auto;
-          border-top: 1px solid #cce0ff;
-          border-bottom: 1px solid #cce0ff;
         }
-        .item {
+        .item-comanda {
           display: flex;
           justify-content: space-between;
-          padding: 3px 0;
-          font-size: 0.9rem;
+          align-items: center;
+          margin-bottom: 0.3rem;
+          font-size: 0.95rem;
         }
-        .item-nome {
-          flex: 1 1 auto;
+        .item-info {
+          flex: 1;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
-          margin-right: 0.5rem;
         }
         .item-quantidade {
-          width: 30px;
-          text-align: center;
-          user-select: none;
-          color: #007bff;
-          font-weight: 600;
+          display: flex;
+          align-items: center;
+          gap: 0.4rem;
+          margin-left: 0.5rem;
         }
-        .item-preco {
-          width: 70px;
-          text-align: right;
-          color: #333;
-          font-weight: 600;
+        .item-quantidade button {
+          background: #2f86eb;
+          border-radius: 4px;
+          padding: 0 6px;
+          font-weight: bold;
+          font-size: 1rem;
+          line-height: 1;
+          color: white;
           user-select: none;
+        }
+        .item-quantidade button:hover {
+          background: #1c5dc9;
+        }
+        .item-preco,
+        .item-total {
+          width: 65px;
+          text-align: right;
+          margin-left: 0.5rem;
+          font-variant-numeric: tabular-nums;
+          color: #555;
         }
         .item-remover {
-          width: 25px;
-          text-align: center;
           cursor: pointer;
-          color: #ff4d4f;
+          color: #c0392b;
+          margin-left: 0.7rem;
+          font-weight: 700;
           user-select: none;
-          transition: color 0.3s;
         }
         .item-remover:hover {
-          color: #d40000;
+          color: #e74c3c;
         }
-
-        .total-comanda {
-          text-align: right;
-          font-weight: 700;
-          margin-top: 6px;
-          font-size: 1rem;
-          color: #0056b3;
-          user-select: none;
-        }
-
-        .botoes-comanda {
-          margin-top: 6px;
+        .comanda-footer {
+          margin-top: 0.7rem;
           display: flex;
           justify-content: space-between;
-          gap: 6px;
-          flex-wrap: wrap;
+          align-items: center;
+          font-weight: 700;
+          color: #2f86eb;
+          font-size: 1.05rem;
         }
-
-        .categorias {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 8px;
-          justify-content: center;
-          user-select: none;
-        }
-
-        .categoria-botao {
-          background: #007bff;
-          color: white;
-          border: none;
-          border-radius: 20px;
-          padding: 6px 14px;
-          cursor: pointer;
-          font-weight: 600;
-          transition: background-color 0.3s;
+        .comanda-footer button {
+          background: #2f86eb;
+          padding: 0.3rem 0.7rem;
           font-size: 0.9rem;
-          user-select: none;
+          border-radius: 6px;
+          transition: background-color 0.3s;
         }
-        .categoria-botao:hover {
-          background: #0056b3;
+        .comanda-footer button:hover {
+          background: #1c5dc9;
         }
 
-        .itens-categoria {
+        .produtos-categorias {
+          display: flex;
+          flex-direction: column;
+          gap: 1rem;
+          max-height: 600px;
+          overflow-y: auto;
+          padding-right: 5px;
+        }
+        .categoria {
+          border-bottom: 2px solid #2f86eb;
+          padding-bottom: 0.3rem;
+        }
+        .categoria h3 {
+          margin: 0 0 0.4rem 0;
+          color: #2f86eb;
+          font-weight: 600;
+        }
+        .lista-produtos {
           display: flex;
           flex-wrap: wrap;
-          gap: 6px;
-          margin-top: 6px;
-          justify-content: center;
-          max-height: 80px;
-          overflow-y: auto;
-          user-select: none;
+          gap: 8px;
         }
-
-        .item-botao {
-          background: #17a2b8;
+        .produto-btn {
+          flex: 1 1 120px;
+          background: #2f86eb;
           color: white;
           border: none;
-          border-radius: 16px;
-          padding: 6px 12px;
+          border-radius: 6px;
+          padding: 0.6rem 0.9rem;
+          font-size: 0.9rem;
           cursor: pointer;
+          user-select: none;
+          text-align: center;
+          transition: background-color 0.3s;
+        }
+        .produto-btn:hover {
+          background: #1c5dc9;
+        }
+
+        footer {
+          text-align: center;
+          padding: 1rem;
           font-weight: 600;
-          transition: background-color 0.3s;
-          font-size: 0.85rem;
-          white-space: nowrap;
-          user-select: none;
-        }
-        .item-botao:hover {
-          background: #0f6674;
-        }
-
-        .total-geral {
-          margin-top: 1rem;
-          text-align: right;
-          font-size: 1.3rem;
-          font-weight: 700;
-          color: #007bff;
+          font-size: 1.1rem;
+          color: #2f86eb;
+          border-top: 1px solid #ddd;
+          background: white;
           user-select: none;
         }
 
-        .btn-limpar-tudo {
-          background: #dc3545;
-          color: white;
-          border: none;
-          padding: 0.5rem 1.2rem;
-          border-radius: 8px;
-          cursor: pointer;
-          font-weight: 700;
-          font-size: 1rem;
-          margin: 1rem auto 3rem;
-          display: block;
-          user-select: none;
-          transition: background-color 0.3s;
-        }
-        .btn-limpar-tudo:hover {
-          background: #b02a37;
-        }
-
-        /* Scrollbar para listas */
-        .comanda-lista::-webkit-scrollbar,
-        .itens-categoria::-webkit-scrollbar,
-        .itens-lista::-webkit-scrollbar {
-          width: 6px;
-          height: 6px;
-        }
-        .comanda-lista::-webkit-scrollbar-thumb,
-        .itens-categoria::-webkit-scrollbar-thumb,
-        .itens-lista::-webkit-scrollbar-thumb {
-          background: rgba(0, 123, 255, 0.3);
-          border-radius: 3px;
-        }
-
-        /* Responsividade */
-        @media (max-width: 768px) {
-          .mesa-card {
-            max-height: none;
+        @media (max-width: 1024px) {
+          main {
+            flex-direction: column;
+            align-items: center;
           }
-          .comanda-lista {
-            max-height: 200px;
+          section {
+            max-width: 90vw;
           }
-          .itens-categoria {
-            max-height: 120px;
+          .produtos-categorias {
+            max-height: 300px;
           }
         }
-        @media print {
-          body {
-            width: 280px !important;
-            margin: 0 !important;
-            padding: 10px !important;
-            font-family: monospace !important;
-            font-size: 12px !important;
-            color: black !important;
-            background: white !important;
+        @media (max-width: 480px) {
+          .item-preco,
+          .item-total {
+            width: 50px;
+            font-size: 0.85rem;
           }
-          .container,
-          .nova-mesa,
-          .filtro-status,
-          .mesas-grid,
-          .btn-limpar-tudo {
-            display: none !important;
+          .produto-btn {
+            flex: 1 1 100%;
           }
-          .mesa-card, .comanda-card {
-            box-shadow: none !important;
-            background: white !important;
-            margin: 0 !important;
-            padding: 0 !important;
+          .item-quantidade button {
+            padding: 0 4px;
+            font-size: 0.9rem;
           }
         }
       `}</style>
 
-      <h1>Sistema de Comandas - Restaurante</h1>
-      <div className="container">
-        {/* Nova mesa */}
-        <section className="nova-mesa" aria-label="Adicionar nova mesa">
-          <input
-            type="text"
-            placeholder="Nome da nova mesa"
-            value={novaMesaNome}
-            onChange={(e) => setNovaMesaNome(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") adicionarMesa();
-            }}
-            aria-label="Nome da nova mesa"
-          />
-          <button onClick={adicionarMesa} aria-label="Adicionar mesa">
-            + Adicionar Mesa
-          </button>
-        </section>
+      <header>Controle de Comandas - Estilo Sischef</header>
 
-        {/* Filtro de comandas */}
-        <section className="filtro-status" aria-label="Filtro de comandas">
-          <button
-            className={filtroStatus === "todas" ? "active" : ""}
-            onClick={() => setFiltroStatus("todas")}
-            aria-pressed={filtroStatus === "todas"}
-          >
-            Todas
-          </button>
-          <button
-            className={filtroStatus === "abertas" ? "active" : ""}
-            onClick={() => setFiltroStatus("abertas")}
-            aria-pressed={filtroStatus === "abertas"}
-          >
-            Abertas
-          </button>
-          <button
-            className={filtroStatus === "finalizadas" ? "active" : ""}
-            onClick={() => setFiltroStatus("finalizadas")}
-            aria-pressed={filtroStatus === "finalizadas"}
-          >
-            Finalizadas
-          </button>
-        </section>
+      <main>
+        {/* Seção de Mesas */}
+        <section aria-label="Mesas cadastradas">
+          <h2>Mesas</h2>
+          <div className="nova-mesa">
+            <input
+              type="text"
+              placeholder="Nome nova mesa"
+              value={novaMesaNome}
+              onChange={(e) => setNovaMesaNome(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && adicionarMesa()}
+              aria-label="Nome da nova mesa"
+            />
+            <button onClick={adicionarMesa} aria-label="Adicionar nova mesa" title="Adicionar mesa">
+              +
+            </button>
+          </div>
 
-        {/* Mesas */}
-        <section className="mesas-grid" aria-label="Mesas e comandas">
-          {mesas.length === 0 && (
-            <p style={{ textAlign: "center", color: "#555" }}>
-              Nenhuma mesa cadastrada.
-            </p>
-          )}
-
-          {mesas.map((mesa) => (
-            <article key={mesa.id} className="mesa-card" aria-label={`Mesa ${mesa.nome}`}>
-              <header className="mesa-header">
+          <ul className="mesas-lista" role="list" aria-live="polite">
+            {mesas.map((mesa) => (
+              <li
+                key={mesa.id}
+                onClick={() => selecionarMesa(mesa.id)}
+                className={mesaSelecionadaId === mesa.id ? "selecionada" : ""}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") selecionarMesa(mesa.id);
+                }}
+                aria-selected={mesaSelecionadaId === mesa.id}
+              >
                 {editandoMesaId === mesa.id ? (
                   <>
                     <input
                       type="text"
-                      value={nomeEditado}
-                      onChange={(e) => setNomeEditado(e.target.value)}
+                      value={mesaNomeEditando}
+                      onChange={(e) => setMesaNomeEditando(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") salvarNomeMesa(mesa.id);
                         if (e.key === "Escape") setEditandoMesaId(null);
                       }}
-                      aria-label={`Editar nome da mesa ${mesa.nome}`}
                       autoFocus
+                      aria-label="Editar nome da mesa"
                     />
-                    <div className="mesa-acoes">
+                    <div className="acoes">
                       <button
-                        onClick={() => salvarNomeMesa(mesa.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          salvarNomeMesa(mesa.id);
+                        }}
+                        title="Salvar nome"
                         aria-label="Salvar nome da mesa"
-                        title="Salvar"
                       >
-                        ✔️
+                        ✔
                       </button>
                       <button
-                        onClick={() => setEditandoMesaId(null)}
-                        aria-label="Cancelar edição"
-                        title="Cancelar"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditandoMesaId(null);
+                        }}
+                        title="Cancelar edição"
+                        aria-label="Cancelar edição do nome da mesa"
                       >
-                        ❌
+                        ✖
                       </button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <div
-                      className="mesa-nome"
-                      tabIndex={0}
-                      role="button"
-                      onClick={() => iniciarEdicaoMesa(mesa.id, mesa.nome)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") iniciarEdicaoMesa(mesa.id, mesa.nome);
-                      }}
-                      aria-label={`Mesa ${mesa.nome}, clique para editar nome`}
-                      title="Clique para editar nome"
-                    >
-                      {mesa.nome}
-                    </div>
-                    <div className="mesa-acoes">
+                    <span>{mesa.nome}</span>
+                    <div className="acoes">
                       <button
-                        onClick={() => adicionarComanda(mesa.id)}
-                        aria-label={`Adicionar nova comanda à mesa ${mesa.nome}`}
-                        title="Adicionar comanda"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          iniciarEdicaoMesa(mesa);
+                        }}
+                        title="Editar nome da mesa"
+                        aria-label={`Editar nome da mesa ${mesa.nome}`}
                       >
-                        ➕
-                      </button>
-                      <button
-                        onClick={() => removerMesa(mesa.id)}
-                        aria-label={`Remover mesa ${mesa.nome}`}
-                        title="Remover mesa"
-                      >
-                        🗑️
+                        ✎
                       </button>
                     </div>
                   </>
                 )}
-              </header>
+              </li>
+            ))}
+          </ul>
+        </section>
 
-              {/* Comandas da mesa */}
-              <div className="comanda-lista" tabIndex={0} aria-label={`Lista de comandas da mesa ${mesa.nome}`}>
-                {filtrarComandas(mesa.comandas).length === 0 && (
-                  <p style={{ fontSize: "0.9rem", color: "#777", textAlign: "center" }}>
-                    Nenhuma comanda {filtroStatus === "todas"
-                      ? "cadastrada"
-                      : filtroStatus === "abertas"
-                      ? "aberta"
-                      : "finalizada"}.
-                  </p>
-                )}
-                {filtrarComandas(mesa.comandas).map((comanda) => (
-                  <div
-                    key={comanda.id}
-                    className="comanda-card"
-                    aria-label={`Comanda ${comanda.id} - Status: ${comanda.status}`}
+        {/* Seção de Comandas da Mesa Selecionada */}
+        <section aria-label="Comandas da mesa selecionada">
+          <h2>Comandas</h2>
+          {mesaSelecionadaId === null ? (
+            <p style={{ fontStyle: "italic", color: "#777" }}>
+              Selecione uma mesa para gerenciar as comandas
+            </p>
+          ) : (
+            mesas
+              .filter((mesa) => mesa.id === mesaSelecionadaId)
+              .map((mesa) =>
+                mesa.comandas.length === 0 ? (
+                  <p
+                    key="vazia"
+                    style={{ fontStyle: "italic", color: "#777" }}
                   >
-                    <div className="comanda-cabecalho">
-                      <span>ID: {comanda.id}</span>
-                      <span>Status: {comanda.status}</span>
-                    </div>
-                    <ul className="itens-lista" aria-label={`Itens da comanda ${comanda.id}`}>
-                      {comanda.itens.length === 0 && (
-                        <li style={{ fontStyle: "italic", color: "#999" }}>
-                          Nenhum item adicionado.
-                        </li>
-                      )}
-                      {comanda.itens.map((item) => (
-                        <li key={item.nome} className="item">
-                          <span className="item-nome" title={item.nome}>
-                            {item.nome}
-                          </span>
-                          <span className="item-quantidade">{item.quantidade}</span>
-                          <span className="item-preco">
-                            R$ {(item.preco * item.quantidade).toFixed(2)}
-                          </span>
-                          {comanda.status === STATUS.ABERTA && (
+                    Nenhuma comanda aberta para essa mesa
+                  </p>
+                ) : (
+                  mesa.comandas.map((comanda) => {
+                    const total = comanda.itens.reduce(
+                      (acc, i) => acc + i.preco * i.quantidade,
+                      0
+                    );
+                    return (
+                      <article
+                        className="card-comanda"
+                        key={comanda.id}
+                        aria-label={`Comanda ${comanda.status}`}
+                      >
+                        <div className="comanda-header">
+                          <span>{comanda.status}</span>
+                          <div>
                             <button
-                              className="item-remover"
-                              aria-label={`Remover um item ${item.nome}`}
-                              title="Remover item"
                               onClick={() =>
-                                removerItem(mesa.id, comanda.id, item.nome)
+                                imprimirComanda(mesa.nome, comanda)
                               }
+                              aria-label="Imprimir comanda"
+                              title="Imprimir comanda"
+                            >
+                              🖨
+                            </button>
+                            {comanda.status === "Aberta" && (
+                              <button
+                                onClick={() =>
+                                  finalizarComanda(mesa.id, comanda.id)
+                                }
+                                aria-label="Finalizar comanda"
+                                title="Finalizar comanda"
+                              >
+                                ✔
+                              </button>
+                            )}
+                            <button
+                              onClick={() =>
+                                excluirComanda(mesa.id, comanda.id)
+                              }
+                              aria-label="Excluir comanda"
+                              title="Excluir comanda"
                             >
                               ✖
                             </button>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="total-comanda" aria-live="polite" aria-atomic="true">
-                      Total: R$ {calcularTotalComanda(comanda).toFixed(2)}
-                    </div>
-                    {/* Botões da comanda */}
-                    <div className="botoes-comanda">
-                      {comanda.status === STATUS.ABERTA && (
-                        <>
-                          <button
-                            className="btn-acao"
-                            onClick={() => finalizarComanda(mesa.id, comanda.id)}
-                            aria-label="Finalizar comanda"
-                          >
-                            Finalizar
-                          </button>
-                          <button
-                            className="btn-acao"
-                            onClick={() => limparComanda(mesa.id, comanda.id)}
-                            aria-label="Limpar comanda"
-                          >
-                            Limpar
-                          </button>
-                        </>
-                      )}
-                      <button
-                        className="btn-acao"
-                        onClick={() => excluirComanda(mesa.id, comanda.id)}
-                        aria-label="Excluir comanda"
-                        style={{ backgroundColor: "#dc3545" }}
-                      >
-                        Excluir
-                      </button>
-                      <button
-                        className="btn-acao"
-                        onClick={() => imprimirComanda(mesa, comanda)}
-                        aria-label="Imprimir comanda"
-                        style={{ backgroundColor: "#28a745" }}
-                      >
-                        Imprimir
-                      </button>
-                    </div>
-
-                    {/* Seleção de itens para adicionar */}
-                    {comanda.status === STATUS.ABERTA && (
-                      <div className="categorias" aria-label="Categorias de produtos">
-                        {Object.entries(produtosPorCategoria).map(
-                          ([categoria, itens]) => (
-                            <CategoriaItens
-                              key={categoria}
-                              categoria={categoria}
-                              itens={itens}
-                              onAdicionar={(item) =>
-                                adicionarItem(mesa.id, comanda.id, item)
-                              }
-                            />
-                          )
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </article>
-          ))}
+                          </div>
+                        </div>
+                        <div className="comanda-itens">
+                          {comanda.itens.map((item) => (
+                            <div
+                              className="item-comanda"
+                              key={item.nome + item.preco}
+                            >
+                              <span className="item-info">{item.nome}</span>
+                              <div className="item-quantidade" role="group" aria-label={`Quantidade de ${item.nome}`}>
+                                <button
+                                  onClick={() =>
+                                    alterarQuantidade(
+                                      mesa.id,
+                                      comanda.id,
+                                      item.nome,
+                                      -1
+                                    )
+                                  }
+                                  aria-label={`Diminuir quantidade de ${item.nome}`}
+                                >
+                                  -
+                                </button>
+                                <span aria-live="polite">{item.quantidade}</span>
+                                <button
+                                  onClick={() =>
+                                    alterarQuantidade(
+                                      mesa.id,
+                                      comanda.id,
+                                      item.nome,
+                                      1
+                                    )
+                                  }
+                                  aria-label={`Aumentar quantidade de ${item.nome}`}
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <span className="item-preco">
+                                R$ {item.preco.toFixed(2)}
+                              </span>
+                              <span className="item-total">
+                                R$ {(item.preco * item.quantidade).toFixed(2)}
+                              </span>
+                              <span
+                                className="item-remover"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() =>
+                                  removerItem(mesa.id, comanda.id, item.nome)
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    removerItem(mesa.id, comanda.id, item.nome);
+                                  }
+                                }}
+                                aria-label={`Remover item ${item.nome}`}
+                                title="Remover item"
+                              >
+                                ×
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="comanda-footer">
+                          <span>Total: R$ {total.toFixed(2)}</span>
+                        </div>
+                      </article>
+                    );
+                  })
+                )
+              )
+          )}
         </section>
 
-        {/* Total geral e limpar tudo */}
-        <div className="total-geral" aria-live="polite" aria-atomic="true">
-          Total Geral das Comandas Finalizadas: R$ {calcularTotalGeral().toFixed(2)}
-        </div>
-        <button
-          className="btn-limpar-tudo"
-          onClick={limparTodasComandas}
-          aria-label="Limpar todas as comandas"
-          title="Limpar todas as comandas"
-        >
-          Limpar Todas as Comandas
-        </button>
+        {/* Seção do Cardápio por Categoria */}
+        <section aria-label="Cardápio por categoria">
+          <h2>Cardápio</h2>
+          <div className="produtos-categorias">
+            {Object.entries(produtosPorCategoria).map(([categoria, produtos]) => (
+              <div className="categoria" key={categoria}>
+                <h3>{categoria}</h3>
+                <div className="lista-produtos">
+                  {produtos.map((produto) => (
+                    <button
+                      key={produto.nome}
+                      className="produto-btn"
+                      onClick={() => adicionarItem(produto)}
+                      aria-label={`Adicionar ${produto.nome} ao pedido`}
+                    >
+                      {produto.nome} — R$ {produto.preco.toFixed(2)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </main>
 
-        {/* Botão imprimir todas comandas finalizadas do dia */}
+      <footer>
+        <span>Total Geral: R$ {totalGeral.toFixed(2)}</span>
         <button
-          className="btn-acao"
-          onClick={imprimirComandasDoDia}
-          aria-label="Imprimir todas as comandas finalizadas do dia"
-          style={{ display: "block", margin: "1rem auto" }}
+          onClick={limparComandasFinalizadas}
+          style={{ marginLeft: "15px", backgroundColor: "#c0392b" }}
+          title="Limpar todas as comandas finalizadas"
         >
-          Imprimir Comandas Finalizadas do Dia
+          Limpar Comandas Finalizadas
         </button>
-      </div>
+        <button
+          onClick={imprimirTodasFinalizadas}
+          style={{ marginLeft: "15px", backgroundColor: "#27ae60" }}
+          title="Imprimir todas as comandas finalizadas"
+        >
+          Imprimir Todas Finalizadas
+        </button>
+      </footer>
     </>
   );
 }
 
-// Componente para mostrar categoria e seus itens
-function CategoriaItens({ categoria, itens, onAdicionar }) {
-  const [visivel, setVisivel] = useState(false);
+export default App;
 
-  return (
-    <div
-      className="categoria-container"
-      style={{ minWidth: 120 }}
-      aria-label={`Categoria ${categoria}`}
-    >
-      <button
-        className="categoria-botao"
-        onClick={() => setVisivel((v) => !v)}
-        aria-expanded={visivel}
-        aria-controls={`itens-${categoria}`}
-      >
-        {categoria}
-      </button>
-      {visivel && (
-        <div
-          id={`itens-${categoria}`}
-          className="itens-categoria"
-          role="list"
-          aria-label={`Itens da categoria ${categoria}`}
-        >
-          {itens.map((item) => (
-            <button
-              key={item.nome}
-              className="item-botao"
-              onClick={() => onAdicionar(item)}
-              role="listitem"
-              aria-label={`Adicionar item ${item.nome} por R$ ${item.preco.toFixed(
-                2
-              )}`}
-              title={`Adicionar ${item.nome} - R$ ${item.preco.toFixed(2)}`}
-            >
-              {item.nome} - R$ {item.preco.toFixed(2)}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
