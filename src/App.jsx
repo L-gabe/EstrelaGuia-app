@@ -797,4 +797,3 @@ const styles = {
     justifyContent: "space-between",
   },
 };
-export default App;
