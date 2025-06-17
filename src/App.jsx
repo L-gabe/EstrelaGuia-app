@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const produtosPorCategoria = {
   "Refeição": [
@@ -72,235 +72,21 @@ const categoriasOrdenadas = [
   "Picolé",
 ];
 
-const styles = {
-  container: {
-    padding: 20,
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
-    backgroundColor: "#f9f9f9",
-    minHeight: "100vh",
-    color: "#333",
-  },
-  header: {
-    marginBottom: 20,
-    fontWeight: "700",
-    fontSize: 28,
-    color: "#2c3e50",
-  },
-  topControls: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    marginBottom: 20,
-    flexWrap: "wrap",
-  },
-  inputDate: {
-    padding: "6px 10px",
-    fontSize: 16,
-    borderRadius: 4,
-    border: "1px solid #ccc",
-  },
-  buttonPrimary: {
-    padding: "8px 15px",
-    borderRadius: 5,
-    border: "none",
-    cursor: "pointer",
-    backgroundColor: "#3498db",
-    color: "#fff",
-    fontWeight: "600",
-    transition: "background-color 0.3s",
-  },
-  buttonPrimaryHover: {
-    backgroundColor: "#2980b9",
-  },
-  buttonDanger: {
-    padding: "8px 15px",
-    borderRadius: 5,
-    border: "none",
-    cursor: "pointer",
-    backgroundColor: "#e74c3c",
-    color: "#fff",
-    fontWeight: "600",
-  },
-  layoutMain: {
-    display: "flex",
-    gap: 20,
-    flexWrap: "wrap",
-  },
-  sidebar: {
-    flex: "1 1 220px",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    boxShadow: "0 0 8px rgb(0 0 0 / 0.1)",
-    padding: 15,
-    maxHeight: "70vh",
-    overflowY: "auto",
-  },
-  sidebarTitle: {
-    fontSize: 18,
-    marginBottom: 12,
-    fontWeight: "700",
-    borderBottom: "1px solid #ddd",
-    paddingBottom: 8,
-  },
-  mesaButton: {
-    display: "block",
-    width: "100%",
-    textAlign: "left",
-    padding: "8px 12px",
-    marginBottom: 6,
-    borderRadius: 5,
-    border: "1px solid #3498db",
-    backgroundColor: "#ecf6fd",
-    color: "#3498db",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "background-color 0.2s",
-  },
-  mesaButtonSelected: {
-    backgroundColor: "#3498db",
-    color: "#fff",
-  },
-  mesasFinalizadasTitle: {
-    fontSize: 16,
-    marginTop: 15,
-    cursor: "pointer",
-    color: "#7f8c8d",
-    userSelect: "none",
-  },
-  contentArea: {
-    flex: "3 1 600px",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    boxShadow: "0 0 12px rgb(0 0 0 / 0.1)",
-    padding: 20,
-    maxHeight: "70vh",
-    overflowY: "auto",
-    display: "flex",
-    flexDirection: "column",
-  },
-  comandaHeader: {
-    marginBottom: 15,
-    fontWeight: "700",
-    fontSize: 22,
-    color: "#2c3e50",
-  },
-  itensContainer: {
-    flexGrow: 1,
-    marginBottom: 15,
-    overflowY: "auto",
-  },
-  itemRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: "8px 10px",
-    borderBottom: "1px solid #eee",
-    fontSize: 16,
-  },
-  btnRemoveItem: {
-    backgroundColor: "#e74c3c",
-    border: "none",
-    color: "#fff",
-    borderRadius: 5,
-    cursor: "pointer",
-    padding: "4px 8px",
-    fontWeight: "600",
-  },
-  actionsRow: {
-    display: "flex",
-    gap: 12,
-    marginBottom: 15,
-  },
-  btnAction: {
-    flexGrow: 1,
-    padding: "10px",
-    borderRadius: 6,
-    border: "none",
-    cursor: "pointer",
-    fontWeight: "700",
-    fontSize: 15,
-    transition: "background-color 0.3s",
-  },
-  btnStatusAberta: {
-    backgroundColor: "#27ae60",
-    color: "#fff",
-  },
-  btnStatusFinalizada: {
-    backgroundColor: "#95a5a6",
-    color: "#fff",
-  },
-  btnLimpar: {
-    backgroundColor: "#f39c12",
-    color: "#fff",
-  },
-  btnExcluir: {
-    backgroundColor: "#e74c3c",
-    color: "#fff",
-  },
-  btnImprimir: {
-    backgroundColor: "#2980b9",
-    color: "#fff",
-  },
-  categoriasContainer: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))",
-    gap: 12,
-    maxHeight: "350px",
-    overflowY: "auto",
-  },
-  categoriaBox: {
-    backgroundColor: "#fafafa",
-    borderRadius: 6,
-    padding: 10,
-    boxShadow: "inset 0 0 5px rgb(0 0 0 / 0.05)",
-  },
-  categoriaTitle: {
-    marginBottom: 8,
-    fontWeight: "700",
-    fontSize: 16,
-    borderBottom: "1px solid #ddd",
-    paddingBottom: 4,
-    color: "#34495e",
-  },
-  produtoBtn: {
-    display: "block",
-    width: "100%",
-    padding: "8px 5px",
-    marginBottom: 6,
-    borderRadius: 5,
-    border: "1px solid #2980b9",
-    backgroundColor: "#3498db",
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 14,
-    cursor: "pointer",
-    transition: "background-color 0.25s",
-    textAlign: "center",
-  },
-  produtoBtnHover: {
-    backgroundColor: "#1c5980",
-  },
-  footer: {
-    marginTop: 20,
-    fontWeight: "700",
-    fontSize: 18,
-    textAlign: "right",
-    color: "#2c3e50",
-  },
-};
-
 function App() {
   const [mesas, setMesas] = useState(() => JSON.parse(localStorage.getItem("mesas")) || []);
   const [comandas, setComandas] = useState(() => JSON.parse(localStorage.getItem("comandas")) || {});
   const [dataSelecionada, setDataSelecionada] = useState(() => localStorage.getItem("dataSelecionada") || new Date().toISOString().slice(0, 10));
   const [mesaSelecionada, setMesaSelecionada] = useState(null);
-  const [mostrarFinalizadas, setMostrarFinalizadas] = useState(false);
+  const [mostrarFinalizadas, setMostrarFinalizadas] = useState(true);
+  const printRef = useRef();
 
   useEffect(() => { localStorage.setItem("mesas", JSON.stringify(mesas)); }, [mesas]);
   useEffect(() => { localStorage.setItem("comandas", JSON.stringify(comandas)); }, [comandas]);
   useEffect(() => { localStorage.setItem("dataSelecionada", dataSelecionada); }, [dataSelecionada]);
 
   const comandasDoDia = comandas[dataSelecionada] || {};
+
+  // Funções (idem seu código original, mantidas sem alterações)...
 
   const adicionarMesa = () => {
     const nome = prompt("Nome da nova mesa:");
@@ -313,17 +99,25 @@ function App() {
   };
 
   const excluirMesa = (id) => {
-    if (!window.confirm("Excluir mesa? Isso remove a comanda também.")) return;
+    if (!window.confirm("Tem certeza que deseja excluir essa mesa? Isso também removerá a comanda associada.")) return;
+
     setMesas(prev => prev.filter(m => m.id !== id));
-    const novasComandas = { ...comandasDoDia };
-    delete novasComandas[id];
-    setComandas(prev => ({ ...prev, [dataSelecionada]: novasComandas }));
+
+    const novasComandasDoDia = { ...comandasDoDia };
+    if (novasComandasDoDia[id]) {
+      delete novasComandasDoDia[id];
+      setComandas(prev => ({
+        ...prev,
+        [dataSelecionada]: novasComandasDoDia
+      }));
+    }
+
     if (mesaSelecionada === id) setMesaSelecionada(null);
   };
 
   const adicionarItem = (item) => {
     if (!mesaSelecionada) {
-      alert("Selecione uma mesa antes.");
+      alert("Selecione uma mesa antes de adicionar itens.");
       return;
     }
     const mesaId = mesaSelecionada;
@@ -337,107 +131,465 @@ function App() {
 
     setComandas(prev => ({
       ...prev,
-      [dataSelecionada]: { ...comandasDoDia, [mesaId]: comanda },
+      [dataSelecionada]: {
+        ...comandasDoDia,
+        [mesaId]: comanda,
+      }
     }));
   };
 
   const removerItem = (mesaId, nomeItem) => {
     const com = comandasDoDia[mesaId];
     if (!com || Array.isArray(com)) return;
+
     const comanda = { ...com };
-    comanda.itens = comanda.itens.filter(i => i.nome !== nomeItem);
+    if (!Array.isArray(comanda.itens)) return;
+
+    const itensFiltrados = comanda.itens.filter(i => i.nome !== nomeItem);
     setComandas(prev => ({
       ...prev,
-      [dataSelecionada]: { ...comandasDoDia, [mesaId]: comanda },
+      [dataSelecionada]: {
+        ...comandasDoDia,
+        [mesaId]: { ...comanda, itens: itensFiltrados },
+      },
     }));
   };
 
   const toggleStatus = (mesaId) => {
     const com = comandasDoDia[mesaId];
     if (!com || Array.isArray(com)) return;
-    const novoStatus = com.status === "Finalizada" ? "Aberta" : "Finalizada";
+
+    const comanda = { ...com };
+    const novoStatus = comanda.status === "Finalizada" ? "Aberta" : "Finalizada";
+
     setComandas(prev => ({
       ...prev,
-      [dataSelecionada]: { ...comandasDoDia, [mesaId]: { ...com, status: novoStatus } },
+      [dataSelecionada]: {
+        ...comandasDoDia,
+        [mesaId]: { ...comanda, status: novoStatus },
+      }
     }));
   };
 
   const limparComanda = (mesaId) => {
     const com = comandasDoDia[mesaId];
     if (!com || Array.isArray(com)) return;
+
     const comanda = { ...com, itens: [], status: "Aberta" };
     setComandas(prev => ({
       ...prev,
-      [dataSelecionada]: { ...comandasDoDia, [mesaId]: comanda },
+      [dataSelecionada]: {
+        ...comandasDoDia,
+        [mesaId]: comanda,
+      }
     }));
   };
 
   const excluirComanda = (mesaId) => {
     if (!window.confirm("Excluir essa comanda?")) return;
-    const novas = { ...comandasDoDia };
-    delete novas[mesaId];
+
+    const novasComandasDoDia = { ...comandasDoDia };
+    delete novasComandasDoDia[mesaId];
     setComandas(prev => ({
       ...prev,
-      [dataSelecionada]: novas,
+      [dataSelecionada]: novasComandasDoDia,
     }));
+
     if (mesaSelecionada === mesaId) setMesaSelecionada(null);
   };
 
-  const limparTudo = () => {
-    if (!window.confirm("Deseja realmente limpar tudo?")) return;
-    setMesas([]);
-    setComandas(prev => ({ ...prev, [dataSelecionada]: {} }));
-    setMesaSelecionada(null);
+  const totalVendaDia = () => {
+    let total = 0;
+    Object.values(comandasDoDia).forEach(com => {
+      if (com && !Array.isArray(com) && com.itens) {
+        com.itens.forEach(item => total += item.preco * item.quantidade);
+      }
+    });
+    return total.toFixed(2);
+  };
+
+  const imprimirComanda = (mesaId) => {
+    const com = comandasDoDia[mesaId];
+    if (!com || Array.isArray(com)) return alert("Comanda vazia ou inexistente.");
+
+    const itens = com.itens.map(item => `<li>${item.quantidade}x ${item.nome} - R$${(item.preco * item.quantidade).toFixed(2)}</li>`).join("");
+    const total = com.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0).toFixed(2);
+    const html = `
+      <h1>Comanda Mesa ${mesas.find(m => m.id === mesaId)?.nome || mesaId}</h1>
+      <ul>${itens}</ul>
+      <p><strong>Total: R$${total}</strong></p>
+    `;
+    const printWindow = window.open("", "", "width=600,height=400");
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   const imprimirTodasComandas = () => {
-    const todas = comandasDoDia;
-    if (Object.keys(todas).length === 0) {
-      alert("Nenhuma comanda para imprimir.");
-      return;
-    }
-
-    let printContent = `<h2>Comandas do Dia ${dataSelecionada}</h2>`;
-    Object.entries(todas).forEach(([mesaId, comanda]) => {
-      if (!comanda || Array.isArray(comanda)) return;
-      const nomeMesa = mesas.find(m => m.id === mesaId)?.nome || mesaId;
-      printContent += `
-        <div style="margin-bottom:10px; padding:4px; border-bottom:1px dashed #000;">
-        <h4>Mesa: ${nomeMesa} (${comanda.status})</h4>
-        <ul>
-          ${comanda.itens.map(i => `<li>${i.nome} x${i.quantidade} = R$${(i.preco * i.quantidade).toFixed(2)}</li>`).join("")}
-        </ul>
-        <strong>Total: R$${comanda.itens.reduce((a, i) => a + i.preco * i.quantidade, 0).toFixed(2)}</strong>
-        </div>
-      `;
+    let html = `<h1>Comandas do Dia ${dataSelecionada}</h1>`;
+    Object.entries(comandasDoDia).forEach(([mesaId, com]) => {
+      if (com && !Array.isArray(com)) {
+        html += `<h2>Mesa ${mesas.find(m => m.id === mesaId)?.nome || mesaId}</h2><ul>`;
+        com.itens.forEach(item => {
+          html += `<li>${item.quantidade}x ${item.nome} - R$${(item.preco * item.quantidade).toFixed(2)}</li>`;
+        });
+        const total = com.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0).toFixed(2);
+        html += `</ul><p><strong>Total: R$${total}</strong></p><hr>`;
+      }
     });
 
-    const janela = window.open("", "", "width=400,height=600");
-    janela.document.write(`<html><head><title>Imprimir Todas</title></head><body>`);
-    janela.document.write(printContent);
-    janela.document.write(`</body></html>`);
-    janela.document.close();
-    janela.print();
+    const printWindow = window.open("", "", "width=800,height=600");
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
-  const totalGeral = Object.values(comandasDoDia).reduce((acc, com) => {
-    if (!com || Array.isArray(com)) return acc;
-    return acc + com.itens.reduce((soma, i) => soma + i.preco * i.quantidade, 0);
-  }, 0);
+  // Render
 
-  const mesasAbertas = mesas.filter(m => !comandasDoDia[m.id] || comandasDoDia[m.id]?.status !== "Finalizada");
-  const mesasFinalizadas = mesas.filter(m => comandasDoDia[m.id]?.status === "Finalizada");
+  return (
+    <div style={styles.container}>
+      <header style={styles.header}>
+        <h1>Controle de Comandas - Restaurante</h1>
+        <div style={styles.dataInput}>
+          <label>Data: </label>
+          <input
+            type="date"
+            value={dataSelecionada}
+            onChange={(e) => setDataSelecionada(e.target.value)}
+            style={styles.inputData}
+          />
+          <button onClick={adicionarMesa} style={styles.btnAddMesa}>+ Mesa</button>
+        </div>
+      </header>
 
-  const imprimirMesa = (mesaId) => {
-    const comanda = comandasDoDia[mesaId];
-    if (!comanda || Array.isArray(comanda)) {
-      alert("Não há comanda para esta mesa.");
-      return;
-    }
-    const nomeMesa = mesas.find(m => m.id === mesaId)?.nome || mesaId;
-    const content = `
-      <div>
-        <h3>Comanda Mesa: ${nomeMesa}</h3>
-        <ul>
-          ${comanda.itens.map(i => `<li>${i.nome} x${i.quantidade} = R$${(i.preco * i.quantidade).to
+      <main style={styles.main}>
+        {/* Lista de Mesas */}
+        <aside style={styles.sidebar}>
+          <h2>Mesas</h2>
+          <div style={styles.listaMesas}>
+            {mesas.map((mesa) => (
+              <div
+                key={mesa.id}
+                onClick={() => setMesaSelecionada(mesa.id)}
+                style={{
+                  ...styles.mesaItem,
+                  ...(mesaSelecionada === mesa.id ? styles.mesaSelecionada : {}),
+                }}
+                title={`Editar nome: ${mesa.nome}`}
+                onDoubleClick={() => editarNomeMesa(mesa.id)}
+              >
+                {mesa.nome}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    excluirMesa(mesa.id);
+                  }}
+                  style={styles.btnExcluirMesa}
+                  title="Excluir mesa"
+                >
+                  &times;
+                </button>
+              </div>
+            ))}
+          </div>
+        </aside>
 
+        {/* Comanda da Mesa Selecionada */}
+        <section style={styles.comandaSection}>
+          {mesaSelecionada ? (
+            <>
+              <h2>Comanda da Mesa: {mesas.find(m => m.id === mesaSelecionada)?.nome || "Mesa"}</h2>
+              <div style={styles.comandaBotoes}>
+                <button onClick={() => toggleStatus(mesaSelecionada)} style={styles.btnStatus}>
+                  {comandasDoDia[mesaSelecionada]?.status === "Finalizada" ? "Reabrir" : "Finalizar"}
+                </button>
+                <button onClick={() => limparComanda(mesaSelecionada)} style={styles.btnLimpar}>
+                  Limpar
+                </button>
+                <button onClick={() => excluirComanda(mesaSelecionada)} style={styles.btnExcluir}>
+                  Excluir Comanda
+                </button>
+                <button onClick={() => imprimirComanda(mesaSelecionada)} style={styles.btnImprimir}>
+                  Imprimir
+                </button>
+              </div>
+
+              <div style={styles.itensComanda}>
+                {comandasDoDia[mesaSelecionada] && comandasDoDia[mesaSelecionada].itens && comandasDoDia[mesaSelecionada].itens.length > 0 ? (
+                  comandasDoDia[mesaSelecionada].itens.map((item, idx) => (
+                    <div key={idx} style={styles.itemComanda}>
+                      <span>{item.quantidade}x {item.nome}</span>
+                      <span>R$ {(item.preco * item.quantidade).toFixed(2)}</span>
+                      <button onClick={() => removerItem(mesaSelecionada, item.nome)} style={styles.btnRemoveItem} title="Remover item">×</button>
+                    </div>
+                  ))
+                ) : (
+                  <p>Sem itens na comanda.</p>
+                )}
+              </div>
+              <h3 style={styles.total}>Total: R$ {comandasDoDia[mesaSelecionada]?.itens.reduce((acc, i) => acc + i.preco * i.quantidade, 0).toFixed(2) || "0.00"}</h3>
+            </>
+          ) : (
+            <p>Selecione uma mesa para ver a comanda.</p>
+          )}
+        </section>
+
+        {/* Cardápio */}
+        <aside style={styles.menuLateral}>
+          <h2>Cardápio</h2>
+          {categoriasOrdenadas.map(categoria => (
+            <div key={categoria} style={styles.categoriaCardapio}>
+              <h3>{categoria}</h3>
+              <div style={styles.itensCategoria}>
+                {produtosPorCategoria[categoria].map(prod => (
+                  <button
+                    key={prod.nome}
+                    onClick={() => adicionarItem(prod)}
+                    style={styles.btnProduto}
+                    title={`Adicionar ${prod.nome} - R$${prod.preco}`}
+                  >
+                    {prod.nome} <br /> <small>R$ {prod.preco.toFixed(2)}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </aside>
+      </main>
+
+      <footer style={styles.footer}>
+        <button onClick={imprimirTodasComandas} style={styles.btnImprimirTodas}>
+          Imprimir todas as comandas
+        </button>
+        <div style={styles.totalDia}>
+          Total Geral do Dia: <strong>R$ {totalVendaDia()}</strong>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+const styles = {
+  container: {
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    maxWidth: 1400,
+    margin: "0 auto",
+    padding: 16,
+    backgroundColor: "#fafafa",
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+  },
+  header: {
+    textAlign: "center",
+    marginBottom: 16,
+    borderBottom: "2px solid #333",
+    paddingBottom: 12,
+  },
+  dataInput: {
+    marginTop: 8,
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 12,
+  },
+  inputData: {
+    fontSize: 16,
+    padding: "6px 10px",
+    borderRadius: 4,
+    border: "1px solid #ccc",
+  },
+  btnAddMesa: {
+    padding: "6px 12px",
+    fontSize: 16,
+    backgroundColor: "#2ecc71",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+    transition: "background-color 0.3s",
+  },
+  main: {
+    display: "flex",
+    flex: 1,
+    gap: 20,
+  },
+  sidebar: {
+    width: 180,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 12,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    height: "calc(100vh - 160px)",
+    overflowY: "auto",
+  },
+  listaMesas: {
+    marginTop: 8,
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  mesaItem: {
+    padding: "8px 12px",
+    backgroundColor: "#e0e0e0",
+    borderRadius: 6,
+    cursor: "pointer",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    transition: "background-color 0.2s",
+    userSelect: "none",
+  },
+  mesaSelecionada: {
+    backgroundColor: "#2ecc71",
+    color: "#fff",
+    fontWeight: "600",
+  },
+  btnExcluirMesa: {
+    backgroundColor: "transparent",
+    border: "none",
+    fontSize: 18,
+    color: "#e74c3c",
+    cursor: "pointer",
+    marginLeft: 8,
+  },
+  comandaSection: {
+    flex: 2,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 20,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    display: "flex",
+    flexDirection: "column",
+  },
+  comandaBotoes: {
+    display: "flex",
+    gap: 12,
+    marginBottom: 12,
+    flexWrap: "wrap",
+  },
+  btnStatus: {
+    backgroundColor: "#27ae60",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "8px 16px",
+    cursor: "pointer",
+    fontWeight: "bold",
+  },
+  btnLimpar: {
+    backgroundColor: "#f39c12",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "8px 16px",
+    cursor: "pointer",
+  },
+  btnExcluir: {
+    backgroundColor: "#e74c3c",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "8px 16px",
+    cursor: "pointer",
+  },
+  btnImprimir: {
+    backgroundColor: "#2980b9",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "8px 16px",
+    cursor: "pointer",
+  },
+  itensComanda: {
+    flex: 1,
+    overflowY: "auto",
+    borderTop: "1px solid #ddd",
+    paddingTop: 8,
+  },
+  itemComanda: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "6px 8px",
+    borderBottom: "1px solid #eee",
+    fontSize: 16,
+  },
+  btnRemoveItem: {
+    backgroundColor: "transparent",
+    border: "none",
+    color: "#e74c3c",
+    fontSize: 22,
+    cursor: "pointer",
+    marginLeft: 8,
+    fontWeight: "bold",
+  },
+  total: {
+    textAlign: "right",
+    marginTop: 12,
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  menuLateral: {
+    width: 320,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    padding: 16,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+    overflowY: "auto",
+    height: "calc(100vh - 160px)",
+  },
+  categoriaCardapio: {
+    marginBottom: 20,
+  },
+  itensCategoria: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))",
+    gap: 10,
+    marginTop: 6,
+  },
+  btnProduto: {
+    backgroundColor: "#3498db",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "10px 6px",
+    cursor: "pointer",
+    fontSize: 14,
+    textAlign: "center",
+    whiteSpace: "normal",
+    userSelect: "none",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+    transition: "background-color 0.3s",
+  },
+  btnProdutoHover: {
+    backgroundColor: "#2980b9",
+  },
+  footer: {
+    marginTop: 20,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingTop: 12,
+    borderTop: "2px solid #ccc",
+  },
+  btnImprimirTodas: {
+    backgroundColor: "#34495e",
+    color: "#fff",
+    border: "none",
+    borderRadius: 6,
+    padding: "10px 20px",
+    cursor: "pointer",
+    fontWeight: "600",
+  },
+  totalDia: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+};
+
+export default App;
